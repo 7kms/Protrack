@@ -8,7 +8,7 @@ const projectSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string(),
   logo: z.string().optional(),
-  difficulty_multiplier: z.number().min(0.1).max(5),
+  difficultyMultiplier: z.number().min(0.1).max(5),
 });
 
 export async function GET() {
@@ -31,7 +31,12 @@ export async function POST(request: Request) {
 
     const newProject = await db
       .insert(projects)
-      .values(validatedData)
+      .values({
+        title: validatedData.title,
+        description: validatedData.description,
+        logo: validatedData.logo,
+        difficultyMultiplier: validatedData.difficultyMultiplier,
+      })
       .returning();
     return NextResponse.json(newProject[0], { status: 201 });
   } catch (error) {
@@ -63,7 +68,12 @@ export async function PUT(request: Request) {
 
     const updatedProject = await db
       .update(projects)
-      .set(validatedData)
+      .set({
+        title: validatedData.title,
+        description: validatedData.description,
+        logo: validatedData.logo,
+        difficultyMultiplier: validatedData.difficultyMultiplier,
+      })
       .where(eq(projects.id, parseInt(id)))
       .returning();
 

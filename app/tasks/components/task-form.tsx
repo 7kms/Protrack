@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/app/components/ui/select";
 import { DateRangePicker } from "@/app/components/ui/date-range-picker";
-import { useForm } from "react-hook-form";
+import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
@@ -30,7 +30,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/app/components/ui/dialog";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -61,18 +61,29 @@ const taskSchema = z.object({
 
 export type TaskFormValues = z.infer<typeof taskSchema>;
 
-interface TaskFormProps {
+interface Project {
+  id: number;
+  title: string;
+}
+
+interface User {
+  id: number;
+  name: string;
+}
+
+interface TaskFormDialogProps {
   mode: "create" | "edit";
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (values: TaskFormValues) => Promise<void>;
-  defaultValues?: Partial<TaskFormValues>;
-  projects: { id: number; title: string }[];
-  users: { id: number; name: string }[];
-  loading?: boolean;
+  onSubmit: (values: TaskFormValues) => void;
+  defaultValues?: TaskFormValues;
+  projects: Project[];
+  users: User[];
+  loading: boolean;
+  form: UseFormReturn<TaskFormValues>;
 }
 
-export const TaskFormDialog = ({
+export function TaskFormDialog({
   mode,
   open,
   onOpenChange,
@@ -80,41 +91,31 @@ export const TaskFormDialog = ({
   defaultValues,
   projects,
   users,
-  loading = false,
-}: TaskFormProps) => {
-  const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: "",
-      issueLink: "",
-      priority: "medium",
-      category: "op",
-      status: "not_started",
-      projectId: 0,
-      assignedToId: 0,
-      dateRange: {
-        from: new Date(),
-        to: new Date(),
-      },
-      contributionScore: "0",
-      ...defaultValues,
-    },
-  });
+  loading,
+  form,
+}: TaskFormDialogProps) {
+  const [isOpen, setIsOpen] = useState(open);
 
-  // Reset form when dialog opens or defaultValues change
   useEffect(() => {
-    if (open && defaultValues) {
-      form.reset(defaultValues);
-    }
-  }, [open, defaultValues, form]);
+    setIsOpen(open);
+  }, [open]);
 
-  const handleSubmit = form.handleSubmit(async (data: TaskFormValues) => {
-    await onSubmit(data);
-  });
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    onOpenChange(open);
+  };
+
+  const handleSubmit = async (values: TaskFormValues) => {
+    try {
+      await onSubmit(values);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle>
             {mode === "create" ? "Create Task" : "Edit Task"}
@@ -126,7 +127,10 @@ export const TaskFormDialog = ({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-4"
+          >
             <FormField
               control={form.control}
               name="title"
@@ -338,15 +342,30 @@ export const TaskFormDialog = ({
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-              ) : null}
-              {mode === "create" ? "Create Task" : "Update Task"}
-            </Button>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => handleOpenChange(false)}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {mode === "create" ? "Creating..." : "Updating..."}
+                  </>
+                ) : mode === "create" ? (
+                  "Create"
+                ) : (
+                  "Update"
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
     </Dialog>
   );
-};
+}

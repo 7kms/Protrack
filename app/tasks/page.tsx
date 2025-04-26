@@ -14,6 +14,7 @@ import {
   Copy,
   Loader2,
   Check,
+  Download,
 } from "lucide-react";
 import {
   Dialog,
@@ -427,23 +428,6 @@ export default function TasksPage() {
     },
   });
 
-  const editForm = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: "",
-      issueLink: "",
-      priority: "medium",
-      projectId: 0,
-      assignedToId: 0,
-      dateRange: {
-        from: new Date(),
-        to: new Date(),
-      },
-      contributionScore: "0",
-      category: "op",
-    },
-  });
-
   const fetchTasks = async () => {
     setLoading(true);
     try {
@@ -584,8 +568,8 @@ export default function TasksPage() {
       }
 
       await fetchTasks();
-      setIsEditOpen(false);
       setSelectedTask(null);
+      setIsEditOpen(false);
     } catch (error) {
       console.error("Error updating task:", error);
       alert(error instanceof Error ? error.message : "Failed to update task");
@@ -597,6 +581,20 @@ export default function TasksPage() {
   // Function to handle edit button click
   const handleEdit = (task: Task) => {
     setSelectedTask(task);
+    form.reset({
+      title: task.title,
+      issueLink: task.issueLink || "",
+      priority: task.priority as "high" | "medium" | "low",
+      status: task.status as any,
+      projectId: task.projectId,
+      assignedToId: task.assignedToId,
+      dateRange: {
+        from: new Date(task.startDate),
+        to: new Date(task.endDate),
+      },
+      contributionScore: task.contributionScore.toString(),
+      category: task.category as "op" | "h5" | "architecture",
+    });
     setIsEditOpen(true);
   };
 
@@ -725,11 +723,9 @@ export default function TasksPage() {
     updateUrlParams(newFilters);
   };
 
-  // Add a function to handle copy
+  // Function to handle copy
   const handleCopy = (task: Task) => {
-    console.log("Copying task:", task);
-
-    const defaultValues: TaskFormValues = {
+    form.reset({
       title: task.title,
       issueLink: task.issueLink || "",
       priority: task.priority as "high" | "medium" | "low",
@@ -742,12 +738,46 @@ export default function TasksPage() {
       },
       contributionScore: task.contributionScore.toString(),
       category: task.category as "op" | "h5" | "architecture",
-    };
+    });
+    setIsOpen(true);
+  };
 
-    form.reset(defaultValues);
-    setTimeout(() => {
-      setIsOpen(true);
-    }, 0);
+  const handleExport = async () => {
+    try {
+      // Get current filter parameters
+      const queryParams = new URLSearchParams();
+
+      if (filters.assignedToId.length > 0) {
+        queryParams.set("assignedToId", filters.assignedToId.join(","));
+      }
+      if (filters.projectId.length > 0) {
+        queryParams.set("projectId", filters.projectId.join(","));
+      }
+      if (filters.status.length > 0) {
+        queryParams.set("status", filters.status.join(","));
+      }
+      if (filters.priority.length > 0) {
+        queryParams.set("priority", filters.priority.join(","));
+      }
+      if (filters.category.length > 0) {
+        queryParams.set("category", filters.category.join(","));
+      }
+      if (filters.startDate) {
+        queryParams.set("startDate", filters.startDate);
+      }
+      if (filters.endDate) {
+        queryParams.set("endDate", filters.endDate);
+      }
+
+      // Add export parameter
+      queryParams.set("export", "excel");
+
+      // Trigger download
+      window.location.href = `/api/tasks?${queryParams.toString()}`;
+    } catch (error) {
+      console.error("Error exporting tasks:", error);
+      alert("Failed to export tasks. Please try again.");
+    }
   };
 
   return (
@@ -757,10 +787,16 @@ export default function TasksPage() {
           <CheckSquare className="h-8 w-8" />
           Tasks
         </h1>
-        <Button onClick={() => setIsOpen(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          New Task
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleExport} variant="outline" className="gap-2">
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+          <Button onClick={() => setIsOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Task
+          </Button>
+        </div>
       </div>
 
       {/* Create Task Form */}
@@ -773,35 +809,25 @@ export default function TasksPage() {
         projects={projects}
         users={users}
         loading={createLoading}
+        form={form}
       />
 
       {/* Edit Task Form */}
       <TaskFormDialog
         mode="edit"
         open={isEditOpen}
-        onOpenChange={setIsEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) {
+            setSelectedTask(null);
+          }
+        }}
         onSubmit={handleEditSubmit}
-        defaultValues={
-          selectedTask
-            ? {
-                title: selectedTask.title,
-                issueLink: selectedTask.issueLink,
-                priority: selectedTask.priority as "high" | "medium" | "low",
-                status: selectedTask.status as any,
-                projectId: selectedTask.projectId,
-                assignedToId: selectedTask.assignedToId,
-                dateRange: {
-                  from: new Date(selectedTask.startDate),
-                  to: new Date(selectedTask.endDate),
-                },
-                contributionScore: selectedTask.contributionScore.toString(),
-                category: selectedTask.category as "op" | "h5" | "architecture",
-              }
-            : undefined
-        }
+        defaultValues={form.getValues()}
         projects={projects}
         users={users}
         loading={editLoading}
+        form={form}
       />
 
       {/* Delete confirmation dialog */}
