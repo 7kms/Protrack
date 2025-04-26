@@ -2,7 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/app/components/ui/button";
-import { Plus, Edit, Trash2, FolderKanban, Star } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  FolderKanban,
+  Star,
+  AlertCircle,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -63,6 +70,7 @@ export default function ProjectsPage() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof projectSchema>>({
     resolver: zodResolver(projectSchema),
@@ -100,6 +108,7 @@ export default function ProjectsPage() {
 
   const handleDelete = async (projectId: number) => {
     setProjectToDelete(projectId);
+    setDeleteError(null);
     setIsDeleteAlertOpen(true);
   };
 
@@ -111,19 +120,21 @@ export default function ProjectsPage() {
         method: "DELETE",
       });
 
+      const data = await response.json();
       if (!response.ok) {
-        const data = await response.json();
         throw new Error(data.error || "Failed to delete project");
       }
 
       await fetchProjects();
       setIsDeleteAlertOpen(false);
       setProjectToDelete(null);
+      setDeleteError(null);
     } catch (error) {
       console.error("Error deleting project:", error);
-      alert(
+      setDeleteError(
         error instanceof Error ? error.message : "Failed to delete project"
       );
+      setIsDeleteAlertOpen(true);
     }
   };
 
@@ -262,22 +273,48 @@ export default function ProjectsPage() {
           if (!open) {
             setIsDeleteAlertOpen(false);
             setProjectToDelete(null);
+            setDeleteError(null);
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              project and all associated data.
+              Are you sure you want to delete this project? This action cannot
+              be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
-              Delete
-            </AlertDialogAction>
+          {deleteError && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-4 text-sm text-destructive">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p className="font-medium">{deleteError}</p>
+            </div>
+          )}
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            {deleteError ? (
+              <AlertDialogAction
+                onClick={() => {
+                  setIsDeleteAlertOpen(false);
+                  setProjectToDelete(null);
+                  setDeleteError(null);
+                }}
+                autoFocus
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Close
+              </AlertDialogAction>
+            ) : (
+              <>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Project
+                </AlertDialogAction>
+              </>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

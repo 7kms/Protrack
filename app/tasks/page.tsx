@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/app/components/ui/button";
-import { Plus, Edit, Trash2, CheckSquare, Star } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  CheckSquare,
+  Star,
+  Search,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -55,6 +66,38 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/app/components/ui/alert-dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/app/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/app/components/ui/pagination";
+import {
+  addDays,
+  subDays,
+  subMonths,
+  subWeeks,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isWeekend,
+  addYears,
+  subYears,
+  startOfYear,
+  endOfYear,
+} from "date-fns";
 
 interface TaskFormValues {
   title: string;
@@ -98,10 +141,10 @@ const taskSchema = z.object({
   }),
   contributionScore: z
     .string()
-    .refine(
-      (val) => !isNaN(Number(val)) && Number(val) >= 0,
-      "Must be a valid number greater than or equal to 0"
-    )
+    .refine((val) => {
+      const num = Number(val);
+      return !isNaN(num) && num >= -10 && num <= 10;
+    }, "Contribution score must be between -10 and 10")
     .transform((val) => Number(val)),
 });
 
@@ -129,6 +172,13 @@ interface User {
   name: string;
 }
 
+interface PaginationInfo {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -138,6 +188,24 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+  });
+  const [filters, setFilters] = useState({
+    assignedToId: "all",
+    projectId: "all",
+    startDate: "",
+    endDate: "",
+    status: "all",
+    priority: "all",
+  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: undefined,
+    to: undefined,
+  });
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -175,13 +243,43 @@ export default function TasksPage() {
 
   const fetchTasks = async () => {
     try {
-      const response = await fetch("/api/tasks");
+      const queryParams = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+        ...(filters.assignedToId &&
+          filters.assignedToId !== "all" && {
+            assignedToId: filters.assignedToId,
+          }),
+        ...(filters.projectId &&
+          filters.projectId !== "all" && { projectId: filters.projectId }),
+        ...(filters.startDate && { startDate: filters.startDate }),
+        ...(filters.endDate && { endDate: filters.endDate }),
+        ...(filters.status &&
+          filters.status !== "all" && { status: filters.status }),
+        ...(filters.priority &&
+          filters.priority !== "all" && { priority: filters.priority }),
+      });
+
+      const response = await fetch(`/api/tasks?${queryParams}`);
       const data = await response.json();
-      console.log("Fetched tasks data:", data);
-      setTasks(Array.isArray(data.tasks) ? data.tasks : []);
+      setTasks(data.tasks || []);
+      setPagination(
+        data.pagination || {
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        }
+      );
     } catch (error) {
       console.error("Failed to fetch tasks:", error);
       setTasks([]);
+      setPagination({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      });
     }
   };
 
@@ -211,7 +309,7 @@ export default function TasksPage() {
     fetchTasks();
     fetchProjects();
     fetchUsers();
-  }, []);
+  }, [pagination.page, filters]);
 
   useEffect(() => {
     console.log("Current tasks state:", tasks);
@@ -322,6 +420,51 @@ export default function TasksPage() {
       console.error("Error updating task:", error);
       alert(error instanceof Error ? error.message : "Failed to update task");
     }
+  };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
+  };
+
+  const handleQuickFilter = (range: "week" | "month" | "season") => {
+    const today = new Date();
+    let from: Date;
+    let to: Date = today;
+
+    switch (range) {
+      case "week":
+        from = subWeeks(today, 1);
+        break;
+      case "month":
+        from = subMonths(today, 1);
+        break;
+      case "season":
+        from = subMonths(today, 3);
+        break;
+      default:
+        from = today;
+    }
+
+    setDateRange({ from, to });
+    setFilters((prev) => ({
+      ...prev,
+      startDate: from.toISOString(),
+      endDate: to.toISOString(),
+    }));
+  };
+
+  const clearDateFilter = () => {
+    setDateRange(undefined);
+    setFilters((prev) => ({
+      ...prev,
+      startDate: "",
+      endDate: "",
+    }));
   };
 
   return (
@@ -529,20 +672,20 @@ export default function TasksPage() {
                         <PopoverTrigger asChild>
                           <FormControl>
                             <Button
-                              variant={"outline"}
+                              variant="outline"
                               className={cn(
-                                "w-full pl-3 text-left font-normal",
+                                "w-[300px] pl-3 text-left font-normal",
                                 !field.value && "text-muted-foreground"
                               )}
                             >
                               {field.value?.from ? (
                                 field.value.to ? (
                                   <>
-                                    {format(field.value.from, "LLL dd, y")} -{" "}
-                                    {format(field.value.to, "LLL dd, y")}
+                                    {format(field.value.from, "EEE, MMM dd, y")}{" "}
+                                    - {format(field.value.to, "EEE, MMM dd, y")}
                                   </>
                                 ) : (
-                                  format(field.value.from, "LLL dd, y")
+                                  format(field.value.from, "EEE, MMM dd, y")
                                 )
                               ) : (
                                 <span>Pick a date range</span>
@@ -555,10 +698,32 @@ export default function TasksPage() {
                           <Calendar
                             initialFocus
                             mode="range"
-                            defaultMonth={field.value?.from}
+                            defaultMonth={new Date()}
                             selected={field.value}
                             onSelect={field.onChange}
                             numberOfMonths={2}
+                            className="rounded-md border"
+                            modifiers={{
+                              today: new Date(),
+                              weekend: (date) => isWeekend(date),
+                            }}
+                            modifiersStyles={{
+                              today: {
+                                border: "2px solid #2563eb",
+                                fontWeight: "bold",
+                              },
+                              weekend: {
+                                color: "#dc2626",
+                              },
+                            }}
+                            disabled={(date) => {
+                              return (
+                                date < new Date(new Date().setHours(0, 0, 0, 0))
+                              );
+                            }}
+                            fromYear={2020}
+                            toYear={new Date().getFullYear() + 2}
+                            captionLayout="dropdown-years"
                           />
                         </PopoverContent>
                       </Popover>
@@ -571,15 +736,22 @@ export default function TasksPage() {
                   name="contributionScore"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Contribution Score</FormLabel>
+                      <FormLabel>Contribution Score (-10 to 10)</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Enter contribution score (e.g., 1.5)"
+                          type="number"
+                          min="-10"
+                          max="10"
+                          step="0.1"
+                          placeholder="Enter contribution score"
                           {...field}
                           onChange={(e) => {
                             const value = e.target.value;
-                            if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                              field.onChange(value);
+                            if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
+                              const num = Number(value);
+                              if (value === "" || (num >= -10 && num <= 10)) {
+                                field.onChange(value);
+                              }
                             }
                           }}
                         />
@@ -802,20 +974,20 @@ export default function TasksPage() {
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
-                            variant={"outline"}
+                            variant="outline"
                             className={cn(
-                              "w-full pl-3 text-left font-normal",
+                              "w-[300px] pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
                           >
                             {field.value?.from ? (
                               field.value.to ? (
                                 <>
-                                  {format(field.value.from, "LLL dd, y")} -{" "}
-                                  {format(field.value.to, "LLL dd, y")}
+                                  {format(field.value.from, "EEE, MMM dd, y")} -{" "}
+                                  {format(field.value.to, "EEE, MMM dd, y")}
                                 </>
                               ) : (
-                                format(field.value.from, "LLL dd, y")
+                                format(field.value.from, "EEE, MMM dd, y")
                               )
                             ) : (
                               <span>Pick a date range</span>
@@ -828,10 +1000,32 @@ export default function TasksPage() {
                         <Calendar
                           initialFocus
                           mode="range"
-                          defaultMonth={field.value?.from}
+                          defaultMonth={new Date()}
                           selected={field.value}
                           onSelect={field.onChange}
                           numberOfMonths={2}
+                          className="rounded-md border"
+                          modifiers={{
+                            today: new Date(),
+                            weekend: (date) => isWeekend(date),
+                          }}
+                          modifiersStyles={{
+                            today: {
+                              border: "2px solid #2563eb",
+                              fontWeight: "bold",
+                            },
+                            weekend: {
+                              color: "#dc2626",
+                            },
+                          }}
+                          disabled={(date) => {
+                            return (
+                              date < new Date(new Date().setHours(0, 0, 0, 0))
+                            );
+                          }}
+                          fromYear={2020}
+                          toYear={new Date().getFullYear() + 2}
+                          captionLayout="dropdown-years"
                         />
                       </PopoverContent>
                     </Popover>
@@ -869,45 +1063,214 @@ export default function TasksPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {tasks.map((task) => (
-          <Card
-            key={task.id}
-            className={cn("transition-all duration-300 hover:shadow-lg group", {
-              "border-l-4 border-l-yellow-500": task.priority === "high",
-              "border-l-4 border-l-blue-500": task.priority === "medium",
-              "border-l-4 border-l-green-500": task.priority === "low",
-            })}
+      {/* Filters */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Select
+          value={filters.assignedToId}
+          onValueChange={(value) => handleFilterChange("assignedToId", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by assignee" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Assignees</SelectItem>
+            {users.map((user) => (
+              <SelectItem key={user.id} value={user.id.toString()}>
+                {user.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.projectId}
+          onValueChange={(value) => handleFilterChange("projectId", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by project" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Projects</SelectItem>
+            {projects.map((project) => (
+              <SelectItem key={project.id} value={project.id.toString()}>
+                {project.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.status}
+          onValueChange={(value) => handleFilterChange("status", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="not_started">Not Started</SelectItem>
+            <SelectItem value="developing">Developing</SelectItem>
+            <SelectItem value="testing">Testing</SelectItem>
+            <SelectItem value="online">Online</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="canceled">Canceled</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.priority}
+          onValueChange={(value) => handleFilterChange("priority", value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Filter by priority" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Priorities</SelectItem>
+            <SelectItem value="high">High</SelectItem>
+            <SelectItem value="medium">Medium</SelectItem>
+            <SelectItem value="low">Low</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Date Range Filter */}
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            onClick={() => handleQuickFilter("week")}
+            className="flex items-center gap-2"
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-lg font-semibold line-clamp-1">
-                {task.title}
-              </CardTitle>
-              <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(task)}
-                  className="hover:bg-primary/10 hover:text-primary"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(task.id)}
-                  className="hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                {task.description}
-              </p>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+            <CalendarIcon className="h-4 w-4" />
+            Last Week
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleQuickFilter("month")}
+            className="flex items-center gap-2"
+          >
+            <CalendarIcon className="h-4 w-4" />
+            Last Month
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => handleQuickFilter("season")}
+            className="flex items-center gap-2"
+          >
+            <CalendarIcon className="h-4 w-4" />
+            Last Season
+          </Button>
+          <Button
+            variant="outline"
+            onClick={clearDateFilter}
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            Clear Date Filter
+          </Button>
+        </div>
+        <div className="flex gap-4">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn(
+                  "w-[300px] justify-start text-left font-normal",
+                  !dateRange?.from && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "EEE, MMM dd, y")} -{" "}
+                      {format(dateRange.to, "EEE, MMM dd, y")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "EEE, MMM dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                initialFocus
+                mode="range"
+                defaultMonth={new Date()}
+                selected={dateRange}
+                onSelect={(range) => {
+                  setDateRange(range);
+                  setFilters((prev) => ({
+                    ...prev,
+                    startDate: range?.from?.toISOString() || "",
+                    endDate: range?.to?.toISOString() || "",
+                  }));
+                }}
+                numberOfMonths={2}
+                className="rounded-md border"
+                modifiers={{
+                  today: new Date(),
+                  weekend: (date) => isWeekend(date),
+                }}
+                modifiersStyles={{
+                  today: {
+                    border: "2px solid #2563eb",
+                    fontWeight: "bold",
+                  },
+                  weekend: {
+                    color: "#dc2626",
+                  },
+                }}
+                disabled={(date) => {
+                  return date < new Date(new Date().setHours(0, 0, 0, 0));
+                }}
+                fromYear={2020}
+                toYear={new Date().getFullYear() + 2}
+                captionLayout="dropdown-years"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+
+      {/* Tasks Table */}
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Project</TableHead>
+              <TableHead>Assignee</TableHead>
+              <TableHead>Start Date</TableHead>
+              <TableHead>End Date</TableHead>
+              <TableHead>Contribution</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tasks.map((task) => (
+              <TableRow key={task.id}>
+                <TableCell className="font-medium">
+                  {task.issueLink ? (
+                    <a
+                      href={task.issueLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80"
+                      title="Open GitHub Issue"
+                    >
+                      {task.title}
+                      <ExternalLink className="h-4 w-4 inline-block ml-1" />
+                    </a>
+                  ) : (
+                    task.title
+                  )}
+                </TableCell>
+                <TableCell>
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
@@ -929,6 +1292,8 @@ export default function TasksPage() {
                   >
                     {task.status}
                   </span>
+                </TableCell>
+                <TableCell>
                   <span
                     className={cn(
                       "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
@@ -942,23 +1307,100 @@ export default function TasksPage() {
                       }
                     )}
                   >
-                    {task.priority} priority
+                    {task.priority}
                   </span>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>
-                    {new Date(task.startDate).toLocaleDateString()} -{" "}
-                    {new Date(task.endDate).toLocaleDateString()}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Star className="h-3 w-3" />
-                    {task.contributionScore}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                </TableCell>
+                <TableCell>
+                  {projects.find((p) => p.id === task.projectId)?.title}
+                </TableCell>
+                <TableCell>
+                  {users.find((u) => u.id === task.assignedToId)?.name}
+                </TableCell>
+                <TableCell>
+                  {new Date(task.startDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>
+                  {new Date(task.endDate).toLocaleDateString()}
+                </TableCell>
+                <TableCell>{task.contributionScore}</TableCell>
+                <TableCell>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleEdit(task)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(task.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex items-center justify-between px-2">
+        <div className="flex-1 text-sm text-muted-foreground">
+          Showing {tasks.length} of {pagination.total} items
+        </div>
+        <div className="flex items-center space-x-6 lg:space-x-8">
+          <div className="flex items-center space-x-2">
+            <p className="text-sm font-medium">Rows per page</p>
+            <Select
+              value={pagination.limit.toString()}
+              onValueChange={(value) => {
+                setPagination((prev) => ({
+                  ...prev,
+                  limit: parseInt(value),
+                  page: 1,
+                }));
+              }}
+            >
+              <SelectTrigger className="h-8 w-[70px]">
+                <SelectValue placeholder={pagination.limit} />
+              </SelectTrigger>
+              <SelectContent side="top">
+                {[10, 20, 30, 40, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={pageSize.toString()}>
+                    {pageSize}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Page {pagination.page} of {pagination.totalPages}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+            >
+              <span className="sr-only">Go to previous page</span>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              className="h-8 w-8 p-0"
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+            >
+              <span className="sr-only">Go to next page</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </div>
     </div>
   );

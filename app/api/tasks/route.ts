@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 
@@ -22,12 +22,73 @@ const taskSchema = z.object({
   priority: z.enum(["high", "medium", "low"]),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  contributionScore: z.number().nonnegative().optional(),
+  contributionScore: z
+    .number()
+    .min(-10, "Contribution score must be at least -10")
+    .max(10, "Contribution score must be at most 10")
+    .optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const result = await db.select().from(tasks).orderBy(desc(tasks.createdAt));
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const assignedToId = searchParams.get("assignedToId");
+    const projectId = searchParams.get("projectId");
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const status = searchParams.get("status") as
+      | "not_started"
+      | "developing"
+      | "testing"
+      | "online"
+      | "suspended"
+      | "canceled"
+      | null;
+    const priority = searchParams.get("priority") as
+      | "high"
+      | "medium"
+      | "low"
+      | null;
+
+    const offset = (page - 1) * limit;
+
+    // Build the where conditions
+    const conditions = [];
+    if (assignedToId) {
+      conditions.push(eq(tasks.assignedToId, parseInt(assignedToId)));
+    }
+    if (projectId) {
+      conditions.push(eq(tasks.projectId, parseInt(projectId)));
+    }
+    if (startDate) {
+      conditions.push(gte(tasks.startDate, new Date(startDate)));
+    }
+    if (endDate) {
+      conditions.push(lte(tasks.endDate, new Date(endDate)));
+    }
+    if (status) {
+      conditions.push(eq(tasks.status, status));
+    }
+    if (priority) {
+      conditions.push(eq(tasks.priority, priority));
+    }
+
+    // Get total count for pagination
+    const totalCount = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tasks)
+      .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+    // Get paginated results
+    const result = await db
+      .select()
+      .from(tasks)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(tasks.createdAt))
+      .limit(limit)
+      .offset(offset);
 
     if (!Array.isArray(result)) {
       logger.error("Tasks query result is not an array", { result });
@@ -37,13 +98,16 @@ export async function GET() {
       );
     }
 
-    if (result.length === 0) {
-      logger.info("No tasks found");
-      return NextResponse.json({ tasks: [] });
-    }
-
     logger.info(`Retrieved ${result.length} tasks`);
-    return NextResponse.json({ tasks: result });
+    return NextResponse.json({
+      tasks: result,
+      pagination: {
+        total: totalCount[0].count,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount[0].count / limit),
+      },
+    });
   } catch (error) {
     logger.error("Error fetching tasks", { error });
     return NextResponse.json(
