@@ -25,12 +25,20 @@ import { Day as DefaultDay } from "react-day-picker";
 interface DateRangePickerProps {
   value?: DateRange;
   onChange?: (value: DateRange | undefined) => void;
+  onClear?: () => void;
 }
 
-export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
+export function DateRangePicker({
+  value,
+  onChange,
+  onClear,
+}: DateRangePickerProps) {
   const [month, setMonth] = React.useState<Date>(new Date());
   const [secondMonth, setSecondMonth] = React.useState<Date>(
     addMonths(new Date(), 1)
+  );
+  const [tempRange, setTempRange] = React.useState<DateRange | undefined>(
+    value
   );
 
   const years = React.useMemo(() => {
@@ -43,6 +51,13 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
       setMonth(date);
     } else {
       setSecondMonth(date);
+    }
+  };
+
+  const handleSelect = (range: DateRange | undefined) => {
+    setTempRange(range);
+    if (range?.from && range?.to) {
+      onChange?.(range);
     }
   };
 
@@ -152,8 +167,8 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                 mode="range"
                 month={month}
                 onMonthChange={(date) => handleMonthChange(date, true)}
-                selected={value}
-                onSelect={onChange}
+                selected={tempRange}
+                onSelect={handleSelect}
                 numberOfMonths={1}
                 className="rounded-lg"
                 components={{ Caption: EmptyCaption }}
@@ -175,8 +190,8 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                 mode="range"
                 month={secondMonth}
                 onMonthChange={(date) => handleMonthChange(date, false)}
-                selected={value}
-                onSelect={onChange}
+                selected={tempRange}
+                onSelect={handleSelect}
                 numberOfMonths={1}
                 className="rounded-lg"
                 components={{ Caption: EmptyCaption }}
@@ -194,7 +209,14 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
           variant="ghost"
           size="icon"
           className="h-10 w-10"
-          onClick={() => onChange?.(undefined)}
+          onClick={() => {
+            if (onClear) {
+              onClear();
+            } else {
+              onChange?.(undefined);
+            }
+            setTempRange(undefined);
+          }}
         >
           <X className="h-4 w-4" />
         </Button>

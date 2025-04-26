@@ -34,45 +34,75 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
-    const assignedToId = searchParams.get("assignedToId");
-    const projectId = searchParams.get("projectId");
-    const startDate = searchParams.get("startDate");
-    const endDate = searchParams.get("endDate");
-    const status = searchParams.get("status") as
+
+    // Handle multiple values for filters
+    const getArrayFromParams = (param: string | null) =>
+      param ? param.split(",") : [];
+
+    const assignedToIds = getArrayFromParams(searchParams.get("assignedToId"));
+    const projectIds = getArrayFromParams(searchParams.get("projectId"));
+    const statuses = getArrayFromParams(searchParams.get("status")) as Array<
       | "not_started"
       | "developing"
       | "testing"
       | "online"
       | "suspended"
       | "canceled"
-      | null;
-    const priority = searchParams.get("priority") as
-      | "high"
-      | "medium"
-      | "low"
-      | null;
+    >;
+    const priorities = getArrayFromParams(
+      searchParams.get("priority")
+    ) as Array<"high" | "medium" | "low">;
+
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
 
     const offset = (page - 1) * limit;
 
     // Build the where conditions
     const conditions = [];
-    if (assignedToId) {
-      conditions.push(eq(tasks.assignedToId, parseInt(assignedToId)));
+
+    if (assignedToIds.length > 0) {
+      conditions.push(
+        sql`${tasks.assignedToId} IN (${sql.join(
+          assignedToIds.map((id) => sql`${parseInt(id)}`),
+          sql`, `
+        )})`
+      );
     }
-    if (projectId) {
-      conditions.push(eq(tasks.projectId, parseInt(projectId)));
+
+    if (projectIds.length > 0) {
+      conditions.push(
+        sql`${tasks.projectId} IN (${sql.join(
+          projectIds.map((id) => sql`${parseInt(id)}`),
+          sql`, `
+        )})`
+      );
     }
+
     if (startDate) {
       conditions.push(gte(tasks.startDate, new Date(startDate)));
     }
+
     if (endDate) {
       conditions.push(lte(tasks.endDate, new Date(endDate)));
     }
-    if (status) {
-      conditions.push(eq(tasks.status, status));
+
+    if (statuses.length > 0) {
+      conditions.push(
+        sql`${tasks.status} IN (${sql.join(
+          statuses.map((s) => sql`${s}`),
+          sql`, `
+        )})`
+      );
     }
-    if (priority) {
-      conditions.push(eq(tasks.priority, priority));
+
+    if (priorities.length > 0) {
+      conditions.push(
+        sql`${tasks.priority} IN (${sql.join(
+          priorities.map((p) => sql`${p}`),
+          sql`, `
+        )})`
+      );
     }
 
     // Get total count for pagination

@@ -32,6 +32,7 @@ import {
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { CalendarIcon } from "lucide-react";
 
 interface ContributionData {
   users: {
@@ -204,12 +205,15 @@ export default function ContributionsPage() {
   ];
 
   return (
-    <div className="space-y-8 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-4xl font-bold tracking-tight">Contributions</h1>
+    <div className="space-y-8">
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center gap-2">
+          <BarChart className="h-8 w-8" />
+          Contributions
+        </h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3 p-4 bg-muted/50 rounded-lg">
         <div className="space-y-2">
           <label className="text-sm font-medium">Project</label>
           <Select value={selectedProject} onValueChange={setSelectedProject}>
@@ -253,42 +257,54 @@ export default function ContributionsPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("lastWeek")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 Last Week
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("lastMonth")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 Last Month
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("lastSeason")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 Last Season
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("thisMonth")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 This Month
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("thisSeason")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 This Season
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setDateRangePreset("thisYear")}
+                className="flex items-center gap-2"
               >
+                <CalendarIcon className="h-4 w-4" />
                 This Year
               </Button>
             </div>
@@ -298,13 +314,16 @@ export default function ContributionsPage() {
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       ) : (
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Total Contributions</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart className="h-5 w-5" />
+                Total Contributions
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[400px]">
@@ -326,7 +345,8 @@ export default function ContributionsPage() {
             {Object.values(contributionData?.users || {}).map((user) => (
               <Card key={user.id}>
                 <CardHeader>
-                  <CardTitle className="text-lg">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <PieChart className="h-5 w-5" />
                     {user.name}'s Project Contributions
                   </CardTitle>
                 </CardHeader>

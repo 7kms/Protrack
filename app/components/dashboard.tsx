@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { useRouter } from "next/navigation";
-import { Activity, Users, CheckCircle, Folder } from "lucide-react";
+import {
+  Activity,
+  Users,
+  CheckCircle,
+  Folder,
+  ChevronRight,
+  ClipboardList,
+} from "lucide-react";
 
 interface DashboardStats {
   totalProjects: number;
@@ -15,7 +22,7 @@ interface DashboardStats {
 interface RecentItem {
   id: number;
   title: string;
-  status: string;
+  status: "online" | "developing" | "testing" | "pending";
   date: string;
 }
 
@@ -102,12 +109,6 @@ export function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between border-b pb-4">
-        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-      </div>
-
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card
           className="cursor-pointer transition-all duration-300 hover:bg-accent/5 hover:shadow-lg hover:scale-[1.02] border-l-4 border-l-primary"
@@ -211,26 +212,50 @@ export function Dashboard() {
           </CardHeader>
           <CardContent>
             {recentTasks.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors group"
                   >
-                    <div>
-                      <p className="text-sm font-medium">{task.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {task.status}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col gap-1">
+                        <p className="text-sm font-medium group-hover:text-primary transition-colors">
+                          {task.title}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              task.status === "online"
+                                ? "bg-green-100 text-green-700"
+                                : task.status === "developing"
+                                ? "bg-blue-100 text-blue-700"
+                                : task.status === "testing"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {task.status.charAt(0).toUpperCase() +
+                              task.status.slice(1)}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {task.date}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-sm text-muted-foreground px-2 py-1 rounded-md bg-muted">
-                      {task.date}
-                    </p>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No tasks yet</p>
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ClipboardList className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No tasks yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Create your first task to get started
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

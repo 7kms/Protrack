@@ -7,21 +7,14 @@ import {
   Edit,
   Trash2,
   CheckSquare,
-  Star,
-  Search,
   X,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
   Copy,
   Loader2,
+  Check,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -49,13 +42,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { DateRange } from "react-day-picker";
-import { Calendar } from "@/app/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/app/components/ui/popover";
-import { format } from "date-fns";
+import { DateRangePicker } from "@/app/components/ui/date-range-picker";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "../lib/utils";
 import {
@@ -77,15 +64,6 @@ import {
   TableRow,
 } from "@/app/components/ui/table";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/app/components/ui/pagination";
-import {
   addDays,
   subDays,
   subMonths,
@@ -100,6 +78,11 @@ import {
   startOfYear,
   endOfYear,
 } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+import * as React from "react";
+import { MultiSelect } from "@/app/components/ui/multi-select";
+import { TaskFormDialog } from "./components/task-form";
+import { TaskFilters } from "./components/task-filters";
 
 interface TaskFormValues {
   title: string;
@@ -181,1115 +164,38 @@ interface PaginationInfo {
   totalPages: number;
 }
 
-export default function TasksPage() {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
-  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo>({
-    total: 0,
-    page: 1,
-    limit: 20,
-    totalPages: 1,
-  });
-  const [filters, setFilters] = useState({
-    assignedToId: "all",
-    projectId: "all",
-    startDate: "",
-    endDate: "",
-    status: "all",
-    priority: "all",
-  });
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: undefined,
-    to: undefined,
-  });
-  const [loading, setLoading] = useState(false);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+interface FilterState {
+  assignedToId: string[];
+  projectId: string[];
+  status: string[];
+  priority: string[];
+  startDate: string;
+  endDate: string;
+}
 
-  const form = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      issueLink: "",
-      priority: "medium",
-      status: "not_started",
-      projectId: 0,
-      assignedToId: 0,
-      dateRange: {
-        from: new Date(),
-        to: new Date(),
-      },
-      contributionScore: "0",
-    },
-  });
-
-  const editForm = useForm<TaskFormValues>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      priority: "medium",
-      projectId: 0,
-      assignedToId: 0,
-      dateRange: {
-        from: new Date(),
-        to: new Date(),
-      },
-      contributionScore: "0",
-    },
-  });
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const queryParams = new URLSearchParams({
-        page: pagination.page.toString(),
-        limit: pagination.limit.toString(),
-        ...(filters.assignedToId &&
-          filters.assignedToId !== "all" && {
-            assignedToId: filters.assignedToId,
-          }),
-        ...(filters.projectId &&
-          filters.projectId !== "all" && { projectId: filters.projectId }),
-        ...(filters.startDate && { startDate: filters.startDate }),
-        ...(filters.endDate && { endDate: filters.endDate }),
-        ...(filters.status &&
-          filters.status !== "all" && { status: filters.status }),
-        ...(filters.priority &&
-          filters.priority !== "all" && { priority: filters.priority }),
-      });
-
-      const response = await fetch(`/api/tasks?${queryParams}`);
-      const data = await response.json();
-      setTasks(data.tasks || []);
-      setPagination(
-        data.pagination || {
-          total: 0,
-          page: 1,
-          limit: 20,
-          totalPages: 1,
-        }
-      );
-    } catch (error) {
-      console.error("Failed to fetch tasks:", error);
-      setTasks([]);
-      setPagination({
-        total: 0,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchProjects = async () => {
-    try {
-      const response = await fetch("/api/projects");
-      const data = await response.json();
-      setProjects(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch projects:", error);
-      setProjects([]);
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const response = await fetch("/api/users");
-      const data = await response.json();
-      setUsers(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      setUsers([]);
-    }
-  };
-
-  useEffect(() => {
-    fetchTasks();
-    fetchProjects();
-    fetchUsers();
-  }, [pagination.page, pagination.limit, filters]);
-
-  useEffect(() => {
-    console.log("Current tasks state:", tasks);
-  }, [tasks]);
-
-  const onSubmit = async (values: TaskFormValues) => {
-    setCreateLoading(true);
-    try {
-      const response = await fetch("/api/tasks", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...values,
-          startDate: values.dateRange.from.toISOString(),
-          endDate: values.dateRange.to.toISOString(),
-          contributionScore: Number(values.contributionScore),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to create task");
-      }
-
-      await fetchTasks();
-      form.reset();
-      setIsOpen(false);
-    } catch (error) {
-      console.error("Error creating task:", error);
-    } finally {
-      setCreateLoading(false);
-    }
-  };
-
-  // Function to handle edit button click
-  const handleEdit = (task: Task) => {
-    setSelectedTask(task);
-    editForm.reset({
-      title: task.title,
-      description: task.description || "",
-      issueLink: task.issueLink || "",
-      priority: task.priority as "high" | "medium" | "low",
-      projectId: task.projectId,
-      assignedToId: task.assignedToId || 0,
-      status: task.status as any,
-      dateRange: {
-        from: new Date(task.startDate),
-        to: new Date(task.endDate),
-      },
-      contributionScore: task.contributionScore?.toString() || "0",
-    });
-    setIsEditOpen(true);
-  };
-
-  // Function to handle delete
-  const handleDelete = async (taskId: number) => {
-    setTaskToDelete(taskId);
-    setDeletingTaskId(taskId);
-    setDeleteLoading(false);
-    setIsDeleteAlertOpen(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!taskToDelete) return;
-    setDeleteLoading(true);
-    try {
-      const response = await fetch(`/api/tasks?id=${taskToDelete}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete task");
-      }
-
-      await fetchTasks();
-    } catch (error) {
-      console.error("Error deleting task:", error);
-    } finally {
-      setIsDeleteAlertOpen(false);
-      setTaskToDelete(null);
-      setDeleteLoading(false);
-      setDeletingTaskId(null);
-    }
-  };
-
-  // Function to handle edit submit
-  const onEditSubmit = async (values: TaskFormValues) => {
-    if (!selectedTask) return;
-    setEditLoading(true);
-    try {
-      const response = await fetch(`/api/tasks?id=${selectedTask.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...values,
-          startDate: values.dateRange.from.toISOString(),
-          endDate: values.dateRange.to.toISOString(),
-          contributionScore: Number(values.contributionScore),
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update task");
-      }
-
-      await fetchTasks();
-      editForm.reset();
-      setIsEditOpen(false);
-      setSelectedTask(null);
-    } catch (error) {
-      console.error("Error updating task:", error);
-      alert(error instanceof Error ? error.message : "Failed to update task");
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setPagination((prev) => ({ ...prev, page: 1 }));
-  };
-
-  const handlePageChange = (page: number) => {
-    setPagination((prev) => ({ ...prev, page }));
-  };
-
-  const handleQuickFilter = (range: "week" | "month" | "season") => {
-    const today = new Date();
-    let from: Date;
-    let to: Date = today;
-
-    switch (range) {
-      case "week":
-        from = subWeeks(today, 1);
-        break;
-      case "month":
-        from = subMonths(today, 1);
-        break;
-      case "season":
-        from = subMonths(today, 3);
-        break;
-      default:
-        from = today;
-    }
-
-    setDateRange({ from, to });
-    setFilters((prev) => ({
-      ...prev,
-      startDate: from.toISOString(),
-      endDate: to.toISOString(),
-    }));
-  };
-
-  const clearDateFilter = () => {
-    setDateRange(undefined);
-    setFilters((prev) => ({
-      ...prev,
-      startDate: "",
-      endDate: "",
-    }));
-  };
-
-  // Add a function to handle copy
-  const handleCopy = (task: Task) => {
-    form.reset({
-      title: task.title,
-      description: task.description,
-      issueLink: task.issueLink || "",
-      priority: task.priority as "high" | "medium" | "low",
-      status: task.status as any,
-      projectId: task.projectId,
-      assignedToId: task.assignedToId,
-      dateRange: {
-        from: new Date(task.startDate),
-        to: new Date(task.endDate),
-      },
-      contributionScore: task.contributionScore?.toString() || "0",
-    });
-    setIsOpen(true);
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between border-b pb-4">
-        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center gap-2">
-          <CheckSquare className="h-8 w-8" />
-          Tasks
-        </h1>
-        <Dialog
-          open={isOpen}
-          onOpenChange={(open) => {
-            if (!open) {
-              setIsOpen(false);
-              form.reset();
-            }
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsOpen(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Task
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-xl">
-                <CheckSquare className="h-5 w-5" />
-                Create New Task
-              </DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="space-y-4"
-              >
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Title</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter task title" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Description</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter task description"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="issueLink"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Issue Link (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter issue link" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="status"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Status</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="not_started">
-                            Not Started
-                          </SelectItem>
-                          <SelectItem value="developing">Developing</SelectItem>
-                          <SelectItem value="testing">Testing</SelectItem>
-                          <SelectItem value="online">Online</SelectItem>
-                          <SelectItem value="suspended">Suspended</SelectItem>
-                          <SelectItem value="canceled">Canceled</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="priority"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Priority</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select priority" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="high">High</SelectItem>
-                          <SelectItem value="medium">Medium</SelectItem>
-                          <SelectItem value="low">Low</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(parseInt(value))
-                        }
-                        defaultValue={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select project" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {projects.map((project) => (
-                            <SelectItem
-                              key={project.id}
-                              value={project.id.toString()}
-                            >
-                              {project.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="assignedToId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Assignee</FormLabel>
-                      <Select
-                        onValueChange={(value) =>
-                          field.onChange(parseInt(value))
-                        }
-                        defaultValue={field.value?.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select assignee" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {users.map((user) => (
-                            <SelectItem
-                              key={user.id}
-                              value={user.id.toString()}
-                            >
-                              {user.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="dateRange"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-col">
-                      <FormLabel>Date Range</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn(
-                                "w-[300px] pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
-                              )}
-                            >
-                              {field.value?.from ? (
-                                field.value.to ? (
-                                  <>
-                                    {format(field.value.from, "EEE, MMM dd, y")}{" "}
-                                    - {format(field.value.to, "EEE, MMM dd, y")}
-                                  </>
-                                ) : (
-                                  format(field.value.from, "EEE, MMM dd, y")
-                                )
-                              ) : (
-                                <span>Pick a date range</span>
-                              )}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            initialFocus
-                            mode="range"
-                            defaultMonth={new Date()}
-                            selected={field.value}
-                            onSelect={field.onChange}
-                            numberOfMonths={2}
-                            className="rounded-md border"
-                            modifiers={{
-                              today: new Date(),
-                              weekend: (date) => isWeekend(date),
-                            }}
-                            modifiersStyles={{
-                              today: {
-                                border: "2px solid #2563eb",
-                                fontWeight: "bold",
-                              },
-                              weekend: {
-                                color: "#dc2626",
-                              },
-                            }}
-                            disabled={(date) => {
-                              return (
-                                date < new Date(new Date().setHours(0, 0, 0, 0))
-                              );
-                            }}
-                            fromYear={2020}
-                            toYear={new Date().getFullYear() + 2}
-                            captionLayout="dropdown-years"
-                          />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="contributionScore"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Contribution Score (-10 to 10)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="-10"
-                          max="10"
-                          step="0.1"
-                          placeholder="Enter contribution score"
-                          {...field}
-                          onChange={(e) => {
-                            const value = e.target.value;
-                            if (value === "" || /^-?\d*\.?\d*$/.test(value)) {
-                              const num = Number(value);
-                              if (value === "" || (num >= -10 && num <= 10)) {
-                                field.onChange(value);
-                              }
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={createLoading}
-                >
-                  {createLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-                  ) : null}
-                  Create Task
-                </Button>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog
-        open={isDeleteAlertOpen}
-        onOpenChange={(open) => {
-          if (!open) setIsDeleteAlertOpen(false);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              task and remove it from our servers.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTaskToDelete(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={deleteLoading}>
-              {deleteLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-              ) : null}
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Edit dialog */}
-      <Dialog
-        open={isEditOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsEditOpen(false);
-            setSelectedTask(null);
-            editForm.reset();
-          }
-        }}
-      >
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Task</DialogTitle>
-          </DialogHeader>
-          <Form {...editForm}>
-            <form
-              onSubmit={editForm.handleSubmit(onEditSubmit)}
-              className="space-y-4"
-            >
-              <FormField
-                control={editForm.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter task title" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter task description" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="issueLink"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Issue Link (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter issue link" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="not_started">Not Started</SelectItem>
-                        <SelectItem value="developing">Developing</SelectItem>
-                        <SelectItem value="testing">Testing</SelectItem>
-                        <SelectItem value="online">Online</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                        <SelectItem value="canceled">Canceled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="priority"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Priority</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select priority" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="high">High</SelectItem>
-                        <SelectItem value="medium">Medium</SelectItem>
-                        <SelectItem value="low">Low</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="projectId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Project</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select project" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {projects.map((project) => (
-                          <SelectItem
-                            key={project.id}
-                            value={project.id.toString()}
-                          >
-                            {project.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="assignedToId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assignee</FormLabel>
-                    <Select
-                      onValueChange={(value) => field.onChange(parseInt(value))}
-                      defaultValue={field.value?.toString()}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select assignee" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {users.map((user) => (
-                          <SelectItem key={user.id} value={user.id.toString()}>
-                            {user.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="dateRange"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date Range</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant="outline"
-                            className={cn(
-                              "w-[300px] pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value?.from ? (
-                              field.value.to ? (
-                                <>
-                                  {format(field.value.from, "EEE, MMM dd, y")} -{" "}
-                                  {format(field.value.to, "EEE, MMM dd, y")}
-                                </>
-                              ) : (
-                                format(field.value.from, "EEE, MMM dd, y")
-                              )
-                            ) : (
-                              <span>Pick a date range</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          initialFocus
-                          mode="range"
-                          defaultMonth={new Date()}
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          numberOfMonths={2}
-                          className="rounded-md border"
-                          modifiers={{
-                            today: new Date(),
-                            weekend: (date) => isWeekend(date),
-                          }}
-                          modifiersStyles={{
-                            today: {
-                              border: "2px solid #2563eb",
-                              fontWeight: "bold",
-                            },
-                            weekend: {
-                              color: "#dc2626",
-                            },
-                          }}
-                          disabled={(date) => {
-                            return (
-                              date < new Date(new Date().setHours(0, 0, 0, 0))
-                            );
-                          }}
-                          fromYear={2020}
-                          toYear={new Date().getFullYear() + 2}
-                          captionLayout="dropdown-years"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={editForm.control}
-                name="contributionScore"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contribution Score</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Enter contribution score (e.g., 1.5)"
-                        {...field}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                            field.onChange(value);
-                          }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={editLoading}>
-                {editLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
-                ) : null}
-                Update Task
-              </Button>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Select
-          value={filters.assignedToId}
-          onValueChange={(value) => handleFilterChange("assignedToId", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by assignee" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Assignees</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.id} value={user.id.toString()}>
-                {user.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.projectId}
-          onValueChange={(value) => handleFilterChange("projectId", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by project" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Projects</SelectItem>
-            {projects.map((project) => (
-              <SelectItem key={project.id} value={project.id.toString()}>
-                {project.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.status}
-          onValueChange={(value) => handleFilterChange("status", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="not_started">Not Started</SelectItem>
-            <SelectItem value="developing">Developing</SelectItem>
-            <SelectItem value="testing">Testing</SelectItem>
-            <SelectItem value="online">Online</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="canceled">Canceled</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.priority}
-          onValueChange={(value) => handleFilterChange("priority", value)}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Filter by priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priorities</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="medium">Medium</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Date Range Filter */}
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => handleQuickFilter("week")}
-            className="flex items-center gap-2"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            Last Week
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleQuickFilter("month")}
-            className="flex items-center gap-2"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            Last Month
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => handleQuickFilter("season")}
-            className="flex items-center gap-2"
-          >
-            <CalendarIcon className="h-4 w-4" />
-            Last Season
-          </Button>
-          <Button
-            variant="outline"
-            onClick={clearDateFilter}
-            className="flex items-center gap-2"
-          >
-            <X className="h-4 w-4" />
-            Clear Date Filter
-          </Button>
-        </div>
-        <div className="flex gap-4">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-[300px] justify-start text-left font-normal",
-                  !dateRange?.from && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "EEE, MMM dd, y")} -{" "}
-                      {format(dateRange.to, "EEE, MMM dd, y")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "EEE, MMM dd, y")
-                  )
-                ) : (
-                  <span>Pick a date range</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={new Date()}
-                selected={dateRange}
-                onSelect={(range) => {
-                  setDateRange(range);
-                  setFilters((prev) => ({
-                    ...prev,
-                    startDate: range?.from?.toISOString() || "",
-                    endDate: range?.to?.toISOString() || "",
-                  }));
-                }}
-                numberOfMonths={2}
-                className="rounded-md border"
-                modifiers={{
-                  today: new Date(),
-                  weekend: (date) => isWeekend(date),
-                }}
-                modifiersStyles={{
-                  today: {
-                    border: "2px solid #2563eb",
-                    fontWeight: "bold",
-                  },
-                  weekend: {
-                    color: "#dc2626",
-                  },
-                }}
-                disabled={(date) => {
-                  return date < new Date(new Date().setHours(0, 0, 0, 0));
-                }}
-                fromYear={2020}
-                toYear={new Date().getFullYear() + 2}
-                captionLayout="dropdown-years"
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      {/* Tasks Table */}
-      <div className="rounded-md border relative">
+// Add this new component at the top of the file, before the TasksPage component
+const TasksTable = React.memo(
+  ({
+    tasks,
+    projects,
+    users,
+    loading,
+    onEdit,
+    onCopy,
+    onDelete,
+  }: {
+    tasks: Task[];
+    projects: Project[];
+    users: User[];
+    loading: boolean;
+    onEdit: (task: Task) => void;
+    onCopy: (task: Task) => void;
+    onDelete: (taskId: number) => void;
+  }) => {
+    return (
+      <div className="rounded-lg border bg-card relative">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-background/60 z-10">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
@@ -1311,17 +217,19 @@ export default function TasksPage() {
             {tasks.map((task) => (
               <TableRow
                 key={task.id}
-                className={cn({
-                  "bg-yellow-50 dark:bg-yellow-900/30":
+                className={cn("group transition-colors", {
+                  "bg-yellow-100/80 hover:bg-yellow-200/80 dark:bg-yellow-900/40 dark:hover:bg-yellow-900/50":
                     task.status === "not_started",
-                  "bg-blue-50 dark:bg-blue-900/30":
+                  "bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-900/40 dark:hover:bg-blue-900/50":
                     task.status === "developing",
-                  "bg-purple-50 dark:bg-purple-900/30":
+                  "bg-purple-100/80 hover:bg-purple-200/80 dark:bg-purple-900/40 dark:hover:bg-purple-900/50":
                     task.status === "testing",
-                  "bg-green-50 dark:bg-green-900/30": task.status === "online",
-                  "bg-orange-50 dark:bg-orange-900/30":
+                  "bg-green-100/80 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/50":
+                    task.status === "online",
+                  "bg-orange-100/80 hover:bg-orange-200/80 dark:bg-orange-900/40 dark:hover:bg-orange-900/50":
                     task.status === "suspended",
-                  "bg-red-50 dark:bg-red-900/30": task.status === "canceled",
+                  "bg-red-100/80 hover:bg-red-200/80 dark:bg-red-900/40 dark:hover:bg-red-900/50":
+                    task.status === "canceled",
                 })}
               >
                 <TableCell className="font-medium">
@@ -1330,11 +238,10 @@ export default function TasksPage() {
                       href={task.issueLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary underline hover:text-primary/80"
-                      title="Open GitHub Issue"
+                      className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors"
                     >
                       {task.title}
-                      <ExternalLink className="h-4 w-4 inline-block ml-1" />
+                      <ExternalLink className="h-4 w-4" />
                     </a>
                   ) : (
                     task.title
@@ -1394,28 +301,30 @@ export default function TasksPage() {
                 </TableCell>
                 <TableCell>{task.contributionScore}</TableCell>
                 <TableCell>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleEdit(task)}
+                      onClick={() => onEdit(task)}
+                      className="hover:bg-primary/10 hover:text-primary"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDelete(task.id)}
+                      onClick={() => onCopy(task)}
+                      className="hover:bg-primary/10 hover:text-primary"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Copy className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleCopy(task)}
-                      title="Copy Task"
+                      onClick={() => onDelete(task.id)}
+                      className="hover:bg-destructive/10 hover:text-destructive"
                     >
-                      <Copy className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
@@ -1424,6 +333,507 @@ export default function TasksPage() {
           </TableBody>
         </Table>
       </div>
+    );
+  }
+);
+
+TasksTable.displayName = "TasksTable";
+
+export default function TasksPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    total: 0,
+    page: 1,
+    limit: 20,
+    totalPages: 1,
+  });
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const getArrayFromParams = (param: string | null) =>
+      param ? param.split(",") : [];
+
+    return {
+      assignedToId: getArrayFromParams(searchParams.get("assignedToId")),
+      projectId: getArrayFromParams(searchParams.get("projectId")),
+      status: getArrayFromParams(searchParams.get("status")),
+      priority: getArrayFromParams(searchParams.get("priority")),
+      startDate: searchParams.get("startDate") || "",
+      endDate: searchParams.get("endDate") || "",
+    };
+  });
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const from = searchParams.get("startDate");
+    const to = searchParams.get("endDate");
+    if (from && to) {
+      return {
+        from: new Date(from),
+        to: new Date(to),
+      };
+    }
+    return undefined;
+  });
+  const [loading, setLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+
+  const form = useForm<TaskFormValues>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      issueLink: "",
+      priority: "medium",
+      status: "not_started",
+      projectId: 0,
+      assignedToId: 0,
+      dateRange: {
+        from: new Date(),
+        to: new Date(),
+      },
+      contributionScore: "0",
+    },
+  });
+
+  const editForm = useForm<TaskFormValues>({
+    resolver: zodResolver(taskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      priority: "medium",
+      projectId: 0,
+      assignedToId: 0,
+      dateRange: {
+        from: new Date(),
+        to: new Date(),
+      },
+      contributionScore: "0",
+    },
+  });
+
+  const fetchTasks = async () => {
+    setLoading(true);
+    try {
+      const queryParams = new URLSearchParams({
+        page: pagination.page.toString(),
+        limit: pagination.limit.toString(),
+      });
+
+      // Add filters only if they have values
+      if (filters.assignedToId.length > 0) {
+        queryParams.set("assignedToId", filters.assignedToId.join(","));
+      }
+      if (filters.projectId.length > 0) {
+        queryParams.set("projectId", filters.projectId.join(","));
+      }
+      if (filters.status.length > 0) {
+        queryParams.set("status", filters.status.join(","));
+      }
+      if (filters.priority.length > 0) {
+        queryParams.set("priority", filters.priority.join(","));
+      }
+      if (filters.startDate) {
+        queryParams.set("startDate", filters.startDate);
+      }
+      if (filters.endDate) {
+        queryParams.set("endDate", filters.endDate);
+      }
+
+      const response = await fetch(`/api/tasks?${queryParams.toString()}`);
+      const data = await response.json();
+      setTasks(data.tasks || []);
+      setPagination(
+        data.pagination || {
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        }
+      );
+    } catch (error) {
+      console.error("Failed to fetch tasks:", error);
+      setTasks([]);
+      setPagination({
+        total: 0,
+        page: 1,
+        limit: 20,
+        totalPages: 1,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const response = await fetch("/api/projects");
+      const data = await response.json();
+      setProjects(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch projects:", error);
+      setProjects([]);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/users");
+      const data = await response.json();
+      setUsers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      setUsers([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchTasks();
+    fetchProjects();
+    fetchUsers();
+  }, [pagination.page, pagination.limit, filters]);
+
+  useEffect(() => {
+    console.log("Current tasks state:", tasks);
+  }, [tasks]);
+
+  const handleCreateSubmit = async (values: TaskFormValues) => {
+    setCreateLoading(true);
+    try {
+      const response = await fetch("/api/tasks", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...values,
+          startDate: values.dateRange.from.toISOString(),
+          endDate: values.dateRange.to.toISOString(),
+          contributionScore: Number(values.contributionScore),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to create task");
+      }
+
+      await fetchTasks();
+      setIsOpen(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const handleEditSubmit = async (values: TaskFormValues) => {
+    if (!selectedTask) return;
+    setEditLoading(true);
+    try {
+      const response = await fetch(`/api/tasks?id=${selectedTask.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...values,
+          startDate: values.dateRange.from.toISOString(),
+          endDate: values.dateRange.to.toISOString(),
+          contributionScore: Number(values.contributionScore),
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update task");
+      }
+
+      await fetchTasks();
+      setIsEditOpen(false);
+      setSelectedTask(null);
+    } catch (error) {
+      console.error("Error updating task:", error);
+      alert(error instanceof Error ? error.message : "Failed to update task");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  // Function to handle edit button click
+  const handleEdit = (task: Task) => {
+    setSelectedTask(task);
+    setIsEditOpen(true);
+  };
+
+  // Function to handle delete
+  const handleDelete = async (taskId: number) => {
+    setTaskToDelete(taskId);
+    setDeletingTaskId(taskId);
+    setDeleteLoading(false);
+    setIsDeleteAlertOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!taskToDelete) return;
+    setDeleteLoading(true);
+    try {
+      const response = await fetch(`/api/tasks?id=${taskToDelete}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete task");
+      }
+
+      await fetchTasks();
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    } finally {
+      setIsDeleteAlertOpen(false);
+      setTaskToDelete(null);
+      setDeleteLoading(false);
+      setDeletingTaskId(null);
+    }
+  };
+
+  const updateUrlParams = (newFilters: FilterState) => {
+    const params = new URLSearchParams();
+
+    if (newFilters.assignedToId.length > 0) {
+      params.set("assignedToId", newFilters.assignedToId.join(","));
+    }
+    if (newFilters.projectId.length > 0) {
+      params.set("projectId", newFilters.projectId.join(","));
+    }
+    if (newFilters.status.length > 0) {
+      params.set("status", newFilters.status.join(","));
+    }
+    if (newFilters.priority.length > 0) {
+      params.set("priority", newFilters.priority.join(","));
+    }
+    if (newFilters.startDate) {
+      params.set("startDate", newFilters.startDate);
+    }
+    if (newFilters.endDate) {
+      params.set("endDate", newFilters.endDate);
+    }
+
+    const newUrl = params.toString()
+      ? `?${params.toString()}`
+      : window.location.pathname;
+    router.push(newUrl, { scroll: false });
+  };
+
+  const handleFilterChange = (key: keyof FilterState, value: string[]) => {
+    const newFilters = { ...filters, [key]: value };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
+    setPagination((prev) => ({ ...prev, page: 1 }));
+  };
+
+  const handlePageChange = (page: number) => {
+    setPagination((prev) => ({ ...prev, page }));
+  };
+
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    setDateRange(range);
+    const newFilters = {
+      ...filters,
+      startDate: range?.from?.toISOString() || "",
+      endDate: range?.to?.toISOString() || "",
+    };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
+  };
+
+  const handleQuickFilter = (range: "week" | "month" | "season") => {
+    const today = new Date();
+    let from: Date;
+    let to: Date = today;
+
+    switch (range) {
+      case "week":
+        from = subWeeks(today, 1);
+        break;
+      case "month":
+        from = subMonths(today, 1);
+        break;
+      case "season":
+        from = subMonths(today, 3);
+        break;
+      default:
+        from = today;
+    }
+
+    const newRange = { from, to };
+    setDateRange(newRange);
+    const newFilters = {
+      ...filters,
+      startDate: from.toISOString(),
+      endDate: to.toISOString(),
+    };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
+  };
+
+  const clearDateFilter = () => {
+    setDateRange(undefined);
+    const newFilters = {
+      ...filters,
+      startDate: "",
+      endDate: "",
+    };
+    setFilters(newFilters);
+    updateUrlParams(newFilters);
+  };
+
+  // Add a function to handle copy
+  const handleCopy = (task: Task) => {
+    console.log("Copying task:", task); // Debug log
+
+    const defaultValues: TaskFormValues = {
+      title: task.title,
+      description: task.description,
+      issueLink: task.issueLink || "",
+      priority: task.priority as "high" | "medium" | "low",
+      status: task.status as any,
+      projectId: task.projectId,
+      assignedToId: task.assignedToId,
+      dateRange: {
+        from: new Date(task.startDate),
+        to: new Date(task.endDate),
+      },
+      contributionScore: task.contributionScore.toString(),
+    };
+
+    // Set the default values for the form
+    form.reset(defaultValues);
+
+    // Open the dialog after a small delay to ensure form values are set
+    setTimeout(() => {
+      setIsOpen(true);
+    }, 0);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between border-b pb-4">
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center gap-2">
+          <CheckSquare className="h-8 w-8" />
+          Tasks
+        </h1>
+        <Button onClick={() => setIsOpen(true)} className="gap-2">
+          <Plus className="h-4 w-4" />
+          New Task
+        </Button>
+      </div>
+
+      {/* Create Task Form */}
+      <TaskFormDialog
+        mode="create"
+        open={isOpen}
+        onOpenChange={setIsOpen}
+        onSubmit={handleCreateSubmit}
+        defaultValues={form.getValues()}
+        projects={projects}
+        users={users}
+        loading={createLoading}
+      />
+
+      {/* Edit Task Form */}
+      <TaskFormDialog
+        mode="edit"
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        onSubmit={handleEditSubmit}
+        defaultValues={
+          selectedTask
+            ? {
+                title: selectedTask.title,
+                description: selectedTask.description,
+                issueLink: selectedTask.issueLink,
+                priority: selectedTask.priority as "high" | "medium" | "low",
+                status: selectedTask.status as any,
+                projectId: selectedTask.projectId,
+                assignedToId: selectedTask.assignedToId,
+                dateRange: {
+                  from: new Date(selectedTask.startDate),
+                  to: new Date(selectedTask.endDate),
+                },
+                contributionScore: selectedTask.contributionScore.toString(),
+              }
+            : undefined
+        }
+        projects={projects}
+        users={users}
+        loading={editLoading}
+      />
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog
+        open={isDeleteAlertOpen}
+        onOpenChange={(open) => {
+          if (!open) setIsDeleteAlertOpen(false);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              task and remove it from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTaskToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleteLoading}>
+              {deleteLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+              ) : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Filters */}
+      <div className="p-4 bg-muted/50 rounded-lg">
+        <TaskFilters
+          assignedToId={filters.assignedToId}
+          projectId={filters.projectId}
+          status={filters.status}
+          priority={filters.priority}
+          dateRange={dateRange}
+          users={users}
+          projects={projects}
+          onFilterChange={handleFilterChange}
+          onDateRangeChange={handleDateRangeChange}
+          onQuickFilter={handleQuickFilter}
+          onClearDateFilter={clearDateFilter}
+        />
+      </div>
+
+      {/* Tasks Table */}
+      <TasksTable
+        tasks={tasks}
+        projects={projects}
+        users={users}
+        loading={loading}
+        onEdit={handleEdit}
+        onCopy={handleCopy}
+        onDelete={handleDelete}
+      />
 
       {/* Pagination */}
       <div className="flex items-center justify-between px-2">

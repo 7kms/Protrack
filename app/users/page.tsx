@@ -2,13 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/app/components/ui/button";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/app/components/ui/card";
+import { Plus, Pencil, Trash2, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +49,7 @@ import {
   TableRow,
 } from "@/app/components/ui/table";
 import { AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const userSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -171,7 +166,10 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between border-b pb-4">
-        <h1 className="text-3xl font-bold">Users</h1>
+        <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent flex items-center gap-2">
+          <Users className="h-8 w-8" />
+          Users
+        </h1>
         <Dialog
           open={isOpen}
           onOpenChange={(open) => {
@@ -197,7 +195,8 @@ export default function UsersPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-xl">
+                <Users className="h-5 w-5" />
                 {editingUser ? "Edit User" : "Create New User"}
               </DialogTitle>
             </DialogHeader>
@@ -255,7 +254,7 @@ export default function UsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="rounded-md border">
+      <div className="rounded-lg border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -266,17 +265,37 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow
+                key={user.id}
+                className="group hover:bg-muted/50 transition-colors"
+              >
                 <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell className="capitalize">
-                  {user.role.replace("_", " ")}
+                <TableCell>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                      {
+                        "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
+                          user.role === "admin",
+                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
+                          user.role === "manager",
+                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
+                          user.role === "developer",
+                        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
+                          user.role === "team_lead",
+                      }
+                    )}
+                  >
+                    {user.role.replace("_", " ")}
+                  </span>
                 </TableCell>
                 <TableCell>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleEdit(user)}
+                      className="hover:bg-primary/10 hover:text-primary"
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -284,6 +303,7 @@ export default function UsersPage() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleDelete(user)}
+                      className="hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

@@ -267,58 +267,6 @@ export default function ProjectsPage() {
         </Dialog>
       </div>
 
-      <AlertDialog
-        open={isDeleteAlertOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsDeleteAlertOpen(false);
-            setProjectToDelete(null);
-            setDeleteError(null);
-          }
-        }}
-      >
-        <AlertDialogContent className="max-w-md">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this project? This action cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {deleteError && (
-            <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-4 text-sm text-destructive">
-              <AlertCircle className="h-5 w-5 shrink-0" />
-              <p className="font-medium">{deleteError}</p>
-            </div>
-          )}
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            {deleteError ? (
-              <AlertDialogAction
-                onClick={() => {
-                  setIsDeleteAlertOpen(false);
-                  setProjectToDelete(null);
-                  setDeleteError(null);
-                }}
-                autoFocus
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Close
-              </AlertDialogAction>
-            ) : (
-              <>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={confirmDelete}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Delete Project
-                </AlertDialogAction>
-              </>
-            )}
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => (
           <Card
@@ -384,6 +332,58 @@ export default function ProjectsPage() {
           </Card>
         ))}
       </div>
+
+      <AlertDialog
+        open={isDeleteAlertOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsDeleteAlertOpen(false);
+            setProjectToDelete(null);
+            setDeleteError(null);
+          }
+        }}
+      >
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Project</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this project? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError && (
+            <div className="flex items-center gap-2 rounded-md bg-destructive/15 p-4 text-sm text-destructive">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p className="font-medium">{deleteError}</p>
+            </div>
+          )}
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            {deleteError ? (
+              <AlertDialogAction
+                onClick={() => {
+                  setIsDeleteAlertOpen(false);
+                  setProjectToDelete(null);
+                  setDeleteError(null);
+                }}
+                autoFocus
+                className="bg-primary text-primary-foreground hover:bg-primary/90"
+              >
+                Close
+              </AlertDialogAction>
+            ) : (
+              <>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmDelete}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Delete Project
+                </AlertDialogAction>
+              </>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
