@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "../lib/utils";
-import { Home, FolderKanban, CheckSquare, Users } from "lucide-react";
+import {
+  Home,
+  FolderKanban,
+  CheckSquare,
+  Users,
+  Folder,
+  ClipboardList,
+  BarChart,
+} from "lucide-react";
 
 const routes = [
   {
@@ -25,6 +33,11 @@ const routes = [
     label: "Users",
     href: "/users",
     icon: Users,
+  },
+  {
+    label: "Contributions",
+    href: "/contributions",
+    icon: BarChart,
   },
 ];
 

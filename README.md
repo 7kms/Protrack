@@ -1,6 +1,6 @@
 # ProTrack - Work Statistics System
 
-ProTrack is a modern, full-stack work statistics system built with Next.js, designed to help teams manage projects, track tasks, and visualize work progress efficiently.
+ProTrack is a modern, full-stack work statistics system built with Next.js, designed to help teams manage projects, track tasks, and analyze contributions efficiently.
 
 ## Features
 
@@ -23,6 +23,15 @@ ProTrack is a modern, full-stack work statistics system built with Next.js, desi
 - Link tasks to external issue tracking systems
 - Set start and end dates for better timeline management
 
+### Contribution Analysis
+
+- Comprehensive contribution tracking across projects
+- Visual statistics and performance metrics
+- Project-based and cross-project contribution views
+- Advanced filtering by project and date range
+- Interactive charts and data visualization
+- Export functionality for detailed reports
+
 ### Visual Dashboard
 
 - Real-time project and task statistics
@@ -37,6 +46,7 @@ ProTrack is a modern, full-stack work statistics system built with Next.js, desi
 - **shadcn/ui** - Beautiful, accessible UI components
 - **Tailwind CSS** - Utility-first CSS framework
 - **Zustand** - Lightweight state management
+- **Chart.js** - Interactive data visualization
 
 ### Backend
 
@@ -109,6 +119,7 @@ The system uses a PostgreSQL database with the following main tables:
 - Assignment tracking
 - Start and end date management
 - Issue link integration
+- Contribution score tracking
 
 ## API Endpoints
 
@@ -136,6 +147,13 @@ The system uses a PostgreSQL database with the following main tables:
 - `PUT /api/tasks/:id` - Update task
 - `DELETE /api/tasks/:id` - Delete task
 
+### Contributions
+
+- `GET /api/contributions` - Get contribution statistics
+- `GET /api/contributions/project/:id` - Get project-specific contributions
+- `GET /api/contributions/user/:id` - Get user-specific contributions
+- `GET /api/contributions/export` - Export contribution data
+
 ## State Management
 
 The application uses Zustand for state management with the following stores:
@@ -143,6 +161,7 @@ The application uses Zustand for state management with the following stores:
 - `useUserStore` - User authentication and profile
 - `useProjectStore` - Project management
 - `useTaskStore` - Task management
+- `useContributionStore` - Contribution tracking and analysis
 - `useDashboardStore` - Dashboard data and filters
 
 ## UI Components
