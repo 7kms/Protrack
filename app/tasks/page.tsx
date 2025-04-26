@@ -171,6 +171,7 @@ interface FilterState {
   projectId: string[];
   status: string[];
   priority: string[];
+  category: string[];
   startDate: string;
   endDate: string;
 }
@@ -207,6 +208,7 @@ const TasksTable = React.memo(
               <TableHead>Title</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
+              <TableHead>Category</TableHead>
               <TableHead>Project</TableHead>
               <TableHead>Assignee</TableHead>
               <TableHead>Start Date</TableHead>
@@ -290,6 +292,23 @@ const TasksTable = React.memo(
                   </span>
                 </TableCell>
                 <TableCell>
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                      {
+                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
+                          task.category === "op",
+                        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
+                          task.category === "h5",
+                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
+                          task.category === "architecture",
+                      }
+                    )}
+                  >
+                    {task.category.toUpperCase()}
+                  </span>
+                </TableCell>
+                <TableCell>
                   {projects.find((p) => p.id === task.projectId)?.title}
                 </TableCell>
                 <TableCell>
@@ -368,6 +387,7 @@ export default function TasksPage() {
       projectId: getArrayFromParams(searchParams.get("projectId")),
       status: getArrayFromParams(searchParams.get("status")),
       priority: getArrayFromParams(searchParams.get("priority")),
+      category: getArrayFromParams(searchParams.get("category")),
       startDate: searchParams.get("startDate") || "",
       endDate: searchParams.get("endDate") || "",
     };
@@ -444,6 +464,9 @@ export default function TasksPage() {
       }
       if (filters.priority.length > 0) {
         queryParams.set("priority", filters.priority.join(","));
+      }
+      if (filters.category.length > 0) {
+        queryParams.set("category", filters.category.join(","));
       }
       if (filters.startDate) {
         queryParams.set("startDate", filters.startDate);
@@ -622,6 +645,9 @@ export default function TasksPage() {
     }
     if (newFilters.priority.length > 0) {
       params.set("priority", newFilters.priority.join(","));
+    }
+    if (newFilters.category.length > 0) {
+      params.set("category", newFilters.category.join(","));
     }
     if (newFilters.startDate) {
       params.set("startDate", newFilters.startDate);
@@ -814,6 +840,7 @@ export default function TasksPage() {
           projectId={filters.projectId}
           status={filters.status}
           priority={filters.priority}
+          category={filters.category}
           dateRange={dateRange}
           users={users}
           projects={projects}

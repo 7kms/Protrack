@@ -53,10 +53,20 @@ interface ContributionData {
             contribution: number;
             startDate: Date | null;
             endDate: Date | null;
+            category: string;
           }>;
         };
       };
       projectContributions: Array<{
+        name: string;
+        value: number;
+      }>;
+      categoryContributions: {
+        op: number;
+        h5: number;
+        architecture: number;
+      };
+      categoryContributionsArray: Array<{
         name: string;
         value: number;
       }>;
@@ -82,6 +92,7 @@ export default function ContributionsPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [selectedProject, setSelectedProject] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [loading, setLoading] = useState(false);
 
@@ -132,7 +143,7 @@ export default function ContributionsPage() {
 
   useEffect(() => {
     fetchContributionData();
-  }, [selectedProject, selectedUser, dateRange]);
+  }, [selectedProject, selectedUser, selectedCategory, dateRange]);
 
   const fetchProjects = async () => {
     try {
@@ -160,6 +171,7 @@ export default function ContributionsPage() {
       let url = "/api/contributions?";
       if (selectedProject !== "all") url += `projectId=${selectedProject}&`;
       if (selectedUser !== "all") url += `userId=${selectedUser}&`;
+      if (selectedCategory !== "all") url += `category=${selectedCategory}&`;
       if (dateRange) {
         url += `startDate=${dateRange.from?.toISOString()}&endDate=${dateRange.to?.toISOString()}`;
       }
@@ -194,14 +206,14 @@ export default function ContributionsPage() {
   };
 
   const COLORS = [
-    "#0088FE",
-    "#00C49F",
-    "#FFBB28",
-    "#FF8042",
-    "#8884d8",
-    "#82ca9d",
-    "#ffc658",
-    "#ff7300",
+    "#0088FE", // Blue
+    "#00C49F", // Teal
+    "#FFBB28", // Yellow
+    "#FF8042", // Orange
+    "#8884d8", // Purple
+    "#82ca9d", // Green
+    "#ffc658", // Light Orange
+    "#ff7300", // Dark Orange
   ];
 
   return (
@@ -213,104 +225,106 @@ export default function ContributionsPage() {
         </h1>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3 p-4 bg-muted/50 rounded-lg">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Project</label>
-          <Select value={selectedProject} onValueChange={setSelectedProject}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Projects</SelectItem>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id.toString()}>
-                  {project.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      {/* Filters Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Filters</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 md:grid-cols-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Project</label>
+              <Select
+                value={selectedProject}
+                onValueChange={setSelectedProject}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Projects</SelectItem>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id.toString()}>
+                      {project.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">User</label>
-          <Select value={selectedUser} onValueChange={setSelectedUser}>
-            <SelectTrigger>
-              <SelectValue placeholder="Filter by user" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Users</SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.id.toString()}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">User</label>
+              <Select value={selectedUser} onValueChange={setSelectedUser}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by user" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Users</SelectItem>
+                  {users.map((user) => (
+                    <SelectItem key={user.id} value={user.id.toString()}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Date Range</label>
-          <div className="flex flex-col gap-2">
-            <DateRangePicker value={dateRange} onChange={setDateRange} />
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("lastWeek")}
-                className="flex items-center gap-2"
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category</label>
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
               >
-                <CalendarIcon className="h-4 w-4" />
-                Last Week
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("lastMonth")}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                Last Month
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("lastSeason")}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                Last Season
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("thisMonth")}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                This Month
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("thisSeason")}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                This Season
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDateRangePreset("thisYear")}
-                className="flex items-center gap-2"
-              >
-                <CalendarIcon className="h-4 w-4" />
-                This Year
-              </Button>
+                <SelectTrigger>
+                  <SelectValue placeholder="Filter by category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Categories</SelectItem>
+                  <SelectItem value="op">OP</SelectItem>
+                  <SelectItem value="h5">H5</SelectItem>
+                  <SelectItem value="architecture">Architecture</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date Range</label>
+              <div className="flex flex-col gap-2">
+                <DateRangePicker value={dateRange} onChange={setDateRange} />
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDateRangePreset("lastWeek")}
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    Last Week
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDateRangePreset("lastMonth")}
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    Last Month
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDateRangePreset("lastSeason")}
+                    className="flex items-center gap-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    Last Season
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
         <div className="flex items-center justify-center h-64">
@@ -318,6 +332,7 @@ export default function ContributionsPage() {
         </div>
       ) : (
         <>
+          {/* Total Contributions Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -329,59 +344,197 @@ export default function ContributionsPage() {
               <div className="h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={prepareChartData()}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="totalContribution" fill="#8884d8" />
+                    <defs>
+                      <linearGradient
+                        id="colorGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="#4F46E5"
+                          stopOpacity={0.8}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#818CF8"
+                          stopOpacity={0.2}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: "#374151" }}
+                      axisLine={{ stroke: "#E5E7EB" }}
+                    />
+                    <YAxis
+                      tick={{ fill: "#374151" }}
+                      axisLine={{ stroke: "#E5E7EB" }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "0.5rem",
+                        color: "#374151",
+                      }}
+                      labelStyle={{ color: "#374151" }}
+                      formatter={(value: number) => [
+                        `${value.toFixed(2)}`,
+                        "Contribution",
+                      ]}
+                    />
+                    <Legend
+                      formatter={(value) => (
+                        <span className="text-gray-700">{value}</span>
+                      )}
+                    />
+                    <Bar
+                      dataKey="totalContribution"
+                      fill="url(#colorGradient)"
+                      radius={[4, 4, 0, 0]}
+                      animationDuration={1500}
+                      animationBegin={0}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </CardContent>
           </Card>
 
+          {/* User Contributions Section */}
           <div className="grid gap-4 md:grid-cols-2">
             {Object.values(contributionData?.users || {}).map((user) => (
-              <Card key={user.id}>
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <PieChart className="h-5 w-5" />
-                    {user.name}'s Project Contributions
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={user.projectContributions || []}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          label={({ name, percent }) =>
-                            `${name} (${(percent * 100).toFixed(0)}%)`
-                          }
-                          outerRadius={100}
-                          fill="#8884d8"
-                          dataKey="value"
-                        >
-                          {(user.projectContributions || []).map(
-                            (entry, index) => (
-                              <Cell
-                                key={`cell-${index}`}
-                                fill={COLORS[index % COLORS.length]}
+              <div key={user.id} className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <PieChart className="h-5 w-5" />
+                      {user.name}'s Contributions
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {/* Project Contributions */}
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">By Project</h3>
+                        <div className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={user.projectContributions || []}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {(user.projectContributions || []).map(
+                                  (entry, index) => (
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={COLORS[index % COLORS.length]}
+                                    />
+                                  )
+                                )}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: "hsl(var(--background))",
+                                  border: "1px solid hsl(var(--border))",
+                                  borderRadius: "0.5rem",
+                                }}
                               />
-                            )
-                          )}
-                        </Pie>
-                        <Tooltip />
-                        <Legend />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="flex flex-wrap gap-2 justify-center mt-2">
+                            {(user.projectContributions || []).map(
+                              (entry, index) => (
+                                <span
+                                  key={entry.name}
+                                  className="flex items-center gap-1 text-xs"
+                                  style={{
+                                    color: COLORS[index % COLORS.length],
+                                  }}
+                                >
+                                  <span
+                                    className="inline-block w-3 h-3 rounded-full"
+                                    style={{
+                                      backgroundColor:
+                                        COLORS[index % COLORS.length],
+                                    }}
+                                  ></span>
+                                  {entry.name} ({entry.value})
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Category Contributions */}
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-medium">By Category</h3>
+                        <div className="h-[250px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={user.categoryContributionsArray || []}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {(user.categoryContributionsArray || []).map(
+                                  (entry, index) => (
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={COLORS[index % COLORS.length]}
+                                    />
+                                  )
+                                )}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{
+                                  backgroundColor: "hsl(var(--background))",
+                                  border: "1px solid hsl(var(--border))",
+                                  borderRadius: "0.5rem",
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                          <div className="flex flex-wrap gap-2 justify-center mt-2">
+                            {(user.categoryContributionsArray || []).map(
+                              (entry, index) => (
+                                <span
+                                  key={entry.name}
+                                  className="flex items-center gap-1 text-xs"
+                                  style={{
+                                    color: COLORS[index % COLORS.length],
+                                  }}
+                                >
+                                  <span
+                                    className="inline-block w-3 h-3 rounded-full"
+                                    style={{
+                                      backgroundColor:
+                                        COLORS[index % COLORS.length],
+                                    }}
+                                  ></span>
+                                  {entry.name} ({entry.value})
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         </>

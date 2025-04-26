@@ -23,10 +23,12 @@ interface ContributionData {
             contribution: number;
             startDate: Date | null;
             endDate: Date | null;
+            category: string | null;
           }>;
         };
       };
       projectContributions: Array<{ name: string; value: number }>;
+      categoryContributions: Record<string, number>;
     };
   };
 }
@@ -34,6 +36,7 @@ interface ContributionData {
 const contributionQuerySchema = z.object({
   projectId: z.string().optional(),
   userId: z.string().optional(),
+  category: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
 });
@@ -44,6 +47,7 @@ export async function GET(request: Request) {
     const query = contributionQuerySchema.parse({
       projectId: searchParams.get("projectId") || undefined,
       userId: searchParams.get("userId") || undefined,
+      category: searchParams.get("category") || undefined,
       startDate: searchParams.get("startDate") || undefined,
       endDate: searchParams.get("endDate") || undefined,
     });
@@ -55,6 +59,11 @@ export async function GET(request: Request) {
     }
     if (query.userId) {
       conditions.push(eq(tasks.assignedToId, parseInt(query.userId)));
+    }
+    if (query.category) {
+      conditions.push(
+        eq(tasks.category, query.category as "op" | "h5" | "architecture")
+      );
     }
     if (query.startDate) {
       conditions.push(gte(tasks.startDate, new Date(query.startDate)));
@@ -76,6 +85,7 @@ export async function GET(request: Request) {
         projectDifficulty: projects.difficultyMultiplier,
         userName: users.name,
         userRole: users.role,
+        category: tasks.category,
       })
       .from(tasks)
       .leftJoin(projects, eq(tasks.projectId, projects.id))
@@ -94,6 +104,11 @@ export async function GET(request: Request) {
           totalContribution: 0,
           projects: {},
           projectContributions: [],
+          categoryContributions: {
+            op: 0,
+            h5: 0,
+            architecture: 0,
+          },
         };
       }
 
@@ -111,6 +126,12 @@ export async function GET(request: Request) {
         const contribution =
           Number(task.contributionScore) * Number(task.projectDifficulty || 1);
         acc[task.userId].totalContribution += contribution;
+
+        // Add to category contributions
+        if (task.category) {
+          acc[task.userId].categoryContributions[task.category] += contribution;
+        }
+
         if (task.projectId) {
           acc[task.userId].projects[task.projectId].totalContribution +=
             contribution;
@@ -120,6 +141,7 @@ export async function GET(request: Request) {
             contribution: contribution,
             startDate: task.startDate,
             endDate: task.endDate,
+            category: task.category,
           });
         }
       }
@@ -135,6 +157,14 @@ export async function GET(request: Request) {
           value: project.totalContribution,
         })
       );
+
+      // Add categoryContributions array for category pie chart
+      user.categoryContributionsArray = Object.entries(
+        user.categoryContributions
+      ).map(([category, value]) => ({
+        name: category.toUpperCase(),
+        value,
+      }));
     });
 
     // Calculate total contributions for all users
