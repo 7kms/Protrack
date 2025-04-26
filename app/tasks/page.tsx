@@ -86,7 +86,6 @@ import { TaskFilters } from "./components/task-filters";
 
 interface TaskFormValues {
   title: string;
-  description: string;
   issueLink?: string;
   priority: "high" | "medium" | "low";
   projectId: number;
@@ -103,11 +102,11 @@ interface TaskFormValues {
     to: Date;
   };
   contributionScore: string;
+  category: "op" | "h5" | "architecture";
 }
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
   issueLink: z.string().optional(),
   priority: z.enum(["high", "medium", "low"], {
     required_error: "Please select a priority",
@@ -131,15 +130,18 @@ const taskSchema = z.object({
       return !isNaN(num) && num >= -10 && num <= 10;
     }, "Contribution score must be between -10 and 10")
     .transform((val) => Number(val)),
+  category: z.enum(["op", "h5", "architecture"], {
+    required_error: "Please select a category",
+  }),
 });
 
 interface Task {
   id: number;
   title: string;
-  description: string;
   issueLink?: string;
   status: string;
   priority: string;
+  category: string;
   projectId: number;
   assignedToId: number;
   startDate: string;
@@ -391,7 +393,6 @@ export default function TasksPage() {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: "",
-      description: "",
       issueLink: "",
       priority: "medium",
       status: "not_started",
@@ -402,6 +403,7 @@ export default function TasksPage() {
         to: new Date(),
       },
       contributionScore: "0",
+      category: "op",
     },
   });
 
@@ -409,7 +411,7 @@ export default function TasksPage() {
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: "",
-      description: "",
+      issueLink: "",
       priority: "medium",
       projectId: 0,
       assignedToId: 0,
@@ -418,6 +420,7 @@ export default function TasksPage() {
         to: new Date(),
       },
       contributionScore: "0",
+      category: "op",
     },
   });
 
@@ -698,11 +701,10 @@ export default function TasksPage() {
 
   // Add a function to handle copy
   const handleCopy = (task: Task) => {
-    console.log("Copying task:", task); // Debug log
+    console.log("Copying task:", task);
 
     const defaultValues: TaskFormValues = {
       title: task.title,
-      description: task.description,
       issueLink: task.issueLink || "",
       priority: task.priority as "high" | "medium" | "low",
       status: task.status as any,
@@ -713,12 +715,10 @@ export default function TasksPage() {
         to: new Date(task.endDate),
       },
       contributionScore: task.contributionScore.toString(),
+      category: task.category as "op" | "h5" | "architecture",
     };
 
-    // Set the default values for the form
     form.reset(defaultValues);
-
-    // Open the dialog after a small delay to ensure form values are set
     setTimeout(() => {
       setIsOpen(true);
     }, 0);
@@ -759,7 +759,6 @@ export default function TasksPage() {
           selectedTask
             ? {
                 title: selectedTask.title,
-                description: selectedTask.description,
                 issueLink: selectedTask.issueLink,
                 priority: selectedTask.priority as "high" | "medium" | "low",
                 status: selectedTask.status as any,
@@ -770,6 +769,7 @@ export default function TasksPage() {
                   to: new Date(selectedTask.endDate),
                 },
                 contributionScore: selectedTask.contributionScore.toString(),
+                category: selectedTask.category as "op" | "h5" | "architecture",
               }
             : undefined
         }

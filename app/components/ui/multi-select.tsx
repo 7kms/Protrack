@@ -15,16 +15,16 @@ export type MultiSelectProps = {
   onValueChange: (value: string[]) => void;
   children: React.ReactNode;
   placeholder?: string;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
 };
 
 export const MultiSelect = React.memo(
   ({
-    value,
+    value = [],
     onValueChange,
     children,
     placeholder,
-    options,
+    options = [],
   }: MultiSelectProps) => {
     const handleSelect = (selectedValue: string) => {
       const newValue = value.includes(selectedValue)

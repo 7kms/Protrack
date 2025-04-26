@@ -28,15 +28,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/app/components/ui/dialog";
 import { useEffect } from "react";
 
 const taskSchema = z.object({
   title: z.string().min(1, "Title is required"),
-  description: z.string().min(1, "Description is required"),
   issueLink: z.string().optional(),
   priority: z.enum(["high", "medium", "low"], {
     required_error: "Please select a priority",
+  }),
+  category: z.enum(["op", "h5", "architecture"], {
+    required_error: "Please select a category",
   }),
   projectId: z.number().min(1, "Project is required"),
   assignedToId: z.number().min(1, "Assignee is required"),
@@ -83,9 +86,9 @@ export const TaskFormDialog = ({
     resolver: zodResolver(taskSchema),
     defaultValues: {
       title: "",
-      description: "",
       issueLink: "",
       priority: "medium",
+      category: "op",
       status: "not_started",
       projectId: 0,
       assignedToId: 0,
@@ -110,20 +113,17 @@ export const TaskFormDialog = ({
   });
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(open) => {
-        if (!open) {
-          form.reset();
-        }
-        onOpenChange(open);
-      }}
-    >
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {mode === "create" ? "Create New Task" : "Edit Task"}
+            {mode === "create" ? "Create Task" : "Edit Task"}
           </DialogTitle>
+          <DialogDescription>
+            {mode === "create"
+              ? "Create a new task with the form below."
+              : "Edit the task details below."}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -134,20 +134,7 @@ export const TaskFormDialog = ({
                 <FormItem>
                   <FormLabel>Title</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter task title" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Enter task description" {...field} />
+                    <Input {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -160,7 +147,14 @@ export const TaskFormDialog = ({
                 <FormItem>
                   <FormLabel>Issue Link (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter issue link" {...field} />
+                    <Input
+                      placeholder="Enter issue link"
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -221,13 +215,38 @@ export const TaskFormDialog = ({
             />
             <FormField
               control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Category</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a category" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="op">OP</SelectItem>
+                      <SelectItem value="h5">H5</SelectItem>
+                      <SelectItem value="architecture">Architecture</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="projectId"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Project</FormLabel>
                   <Select
                     onValueChange={(value) => field.onChange(parseInt(value))}
-                    defaultValue={field.value?.toString()}
+                    defaultValue={field.value ? field.value.toString() : "0"}
                   >
                     <FormControl>
                       <SelectTrigger>

@@ -8,11 +8,22 @@ import { CalendarIcon, X } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { subWeeks, subMonths, subMonths as subSeasons } from "date-fns";
 
+interface FilterState {
+  assignedToId: string[];
+  projectId: string[];
+  status: string[];
+  priority: string[];
+  category: string[];
+  startDate: string;
+  endDate: string;
+}
+
 interface TaskFiltersProps {
   assignedToId: string[];
   projectId: string[];
   status: string[];
   priority: string[];
+  category: string[];
   dateRange: DateRange | undefined;
   users: { id: number; name: string }[];
   projects: { id: number; title: string }[];
@@ -22,20 +33,12 @@ interface TaskFiltersProps {
   onClearDateFilter: () => void;
 }
 
-interface FilterState {
-  assignedToId: string[];
-  projectId: string[];
-  status: string[];
-  priority: string[];
-  startDate: string;
-  endDate: string;
-}
-
 export function TaskFilters({
   assignedToId,
   projectId,
   status,
   priority,
+  category,
   dateRange,
   users,
   projects,
@@ -114,6 +117,21 @@ export function TaskFilters({
           <SelectItem value="high">High</SelectItem>
           <SelectItem value="medium">Medium</SelectItem>
           <SelectItem value="low">Low</SelectItem>
+        </MultiSelect>
+
+        <MultiSelect
+          value={category}
+          onValueChange={(value) => onFilterChange("category", value)}
+          placeholder="Filter by category"
+          options={[
+            { value: "op", label: "OP" },
+            { value: "h5", label: "H5" },
+            { value: "architecture", label: "Architecture" },
+          ]}
+        >
+          <SelectItem value="op">OP</SelectItem>
+          <SelectItem value="h5">H5</SelectItem>
+          <SelectItem value="architecture">Architecture</SelectItem>
         </MultiSelect>
       </div>
 

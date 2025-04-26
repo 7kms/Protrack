@@ -7,8 +7,20 @@ import {
   integer,
   boolean,
   real,
+  pgEnum,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
+
+export type UserRole = "admin" | "manager" | "developer" | "team_lead";
+export type TaskStatus =
+  | "not_started"
+  | "developing"
+  | "testing"
+  | "online"
+  | "suspended"
+  | "canceled";
+export type TaskPriority = "high" | "medium" | "low";
+export type TaskCategory = "op" | "h5" | "architecture";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -33,7 +45,6 @@ export const projects = pgTable("projects", {
 export const tasks = pgTable("tasks", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
-  description: text("description"),
   issueLink: text("issue_link"),
   projectId: integer("project_id")
     .references(() => projects.id)
@@ -54,6 +65,9 @@ export const tasks = pgTable("tasks", {
   priority: text("priority", { enum: ["high", "medium", "low"] })
     .notNull()
     .default("medium"),
+  category: text("category", { enum: ["op", "h5", "architecture"] })
+    .notNull()
+    .default("op"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   contributionScore: decimal("contribution_score").default("0"),

@@ -1,5 +1,5 @@
 {
-  "id": "44b35dc9-8128-4cef-a564-4eb59430d40e",
+  "id": "93118d0d-7cfc-497b-9474-a1f060771c86",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "5",
   "dialect": "pg",
@@ -34,30 +34,23 @@
         },
         "difficulty_multiplier": {
           "name": "difficulty_multiplier",
-          "type": "numeric",
+          "type": "real",
           "primaryKey": false,
           "notNull": true,
-          "default": "'1.0'"
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'not_started'"
+          "default": 1
         },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
           "type": "timestamp",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -81,12 +74,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "issue_link": {
           "name": "issue_link",
@@ -119,6 +106,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'medium'"
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'op'"
         },
         "start_date": {
           "name": "start_date",
@@ -202,12 +196,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "role": {
           "name": "role",
           "type": "text",
@@ -232,15 +220,7 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "users_email_unique": {
-          "name": "users_email_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
-        }
-      }
+      "uniqueConstraints": {}
     }
   },
   "enums": {},

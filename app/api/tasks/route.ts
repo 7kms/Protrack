@@ -7,7 +7,6 @@ import { logger } from "@/lib/logger";
 
 const taskSchema = z.object({
   title: z.string().min(1),
-  description: z.string().optional(),
   issueLink: z.string().optional(),
   projectId: z.number(),
   assignedToId: z.number().optional(),
@@ -20,6 +19,7 @@ const taskSchema = z.object({
     "canceled",
   ]),
   priority: z.enum(["high", "medium", "low"]),
+  category: z.enum(["op", "h5", "architecture"]),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   contributionScore: z
@@ -52,6 +52,9 @@ export async function GET(request: Request) {
     const priorities = getArrayFromParams(
       searchParams.get("priority")
     ) as Array<"high" | "medium" | "low">;
+    const categories = getArrayFromParams(
+      searchParams.get("category")
+    ) as Array<"op" | "h5" | "architecture">;
 
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
@@ -100,6 +103,15 @@ export async function GET(request: Request) {
       conditions.push(
         sql`${tasks.priority} IN (${sql.join(
           priorities.map((p) => sql`${p}`),
+          sql`, `
+        )})`
+      );
+    }
+
+    if (categories.length > 0) {
+      conditions.push(
+        sql`${tasks.category} IN (${sql.join(
+          categories.map((c) => sql`${c}`),
           sql`, `
         )})`
       );
@@ -156,12 +168,12 @@ export async function POST(request: Request) {
       .insert(tasks)
       .values({
         title: validatedData.title,
-        description: validatedData.description,
         issueLink: validatedData.issueLink,
         projectId: validatedData.projectId,
         assignedToId: validatedData.assignedToId,
         status: validatedData.status,
         priority: validatedData.priority,
+        category: validatedData.category,
         startDate: validatedData.startDate
           ? new Date(validatedData.startDate)
           : null,
@@ -200,12 +212,12 @@ export async function PUT(request: Request) {
       .update(tasks)
       .set({
         title: validatedData.title,
-        description: validatedData.description,
         issueLink: validatedData.issueLink,
         projectId: validatedData.projectId,
         assignedToId: validatedData.assignedToId,
         status: validatedData.status,
         priority: validatedData.priority,
+        category: validatedData.category,
         startDate: validatedData.startDate
           ? new Date(validatedData.startDate)
           : null,

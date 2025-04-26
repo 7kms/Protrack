@@ -15,7 +15,6 @@ CREATE TABLE projects (
     title VARCHAR(100) NOT NULL,
     description TEXT,
     difficulty_multiplier DECIMAL(3,2) DEFAULT 1.00,
-    status VARCHAR(20) NOT NULL CHECK (status IN ('not_started', 'in_progress', 'completed', 'suspended')),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,10 +23,10 @@ CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     project_id INTEGER NOT NULL REFERENCES projects(id),
     title VARCHAR(100) NOT NULL,
-    description TEXT,
     issue_link VARCHAR(255),
     status VARCHAR(20) NOT NULL CHECK (status IN ('not_started', 'developing', 'testing', 'online', 'suspended', 'canceled')),
     priority VARCHAR(10) NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
+    category VARCHAR(20) NOT NULL CHECK (category IN ('op', 'h5', 'architecture')) DEFAULT 'op',
     contribution_score INTEGER DEFAULT 0,
     start_date DATE,
     end_date DATE,
