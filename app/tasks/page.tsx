@@ -13,6 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Copy,
+  Loader2,
 } from "lucide-react";
 import {
   Card,
@@ -206,6 +208,11 @@ export default function TasksPage() {
     from: undefined,
     to: undefined,
   });
+  const [loading, setLoading] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -242,6 +249,7 @@ export default function TasksPage() {
   });
 
   const fetchTasks = async () => {
+    setLoading(true);
     try {
       const queryParams = new URLSearchParams({
         page: pagination.page.toString(),
@@ -280,6 +288,8 @@ export default function TasksPage() {
         limit: 20,
         totalPages: 1,
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -309,13 +319,14 @@ export default function TasksPage() {
     fetchTasks();
     fetchProjects();
     fetchUsers();
-  }, [pagination.page, filters]);
+  }, [pagination.page, pagination.limit, filters]);
 
   useEffect(() => {
     console.log("Current tasks state:", tasks);
   }, [tasks]);
 
   const onSubmit = async (values: TaskFormValues) => {
+    setCreateLoading(true);
     try {
       const response = await fetch("/api/tasks", {
         method: "POST",
@@ -339,6 +350,8 @@ export default function TasksPage() {
       setIsOpen(false);
     } catch (error) {
       console.error("Error creating task:", error);
+    } finally {
+      setCreateLoading(false);
     }
   };
 
@@ -365,12 +378,14 @@ export default function TasksPage() {
   // Function to handle delete
   const handleDelete = async (taskId: number) => {
     setTaskToDelete(taskId);
+    setDeletingTaskId(taskId);
+    setDeleteLoading(false);
     setIsDeleteAlertOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!taskToDelete) return;
-
+    setDeleteLoading(true);
     try {
       const response = await fetch(`/api/tasks?id=${taskToDelete}`, {
         method: "DELETE",
@@ -386,13 +401,15 @@ export default function TasksPage() {
     } finally {
       setIsDeleteAlertOpen(false);
       setTaskToDelete(null);
+      setDeleteLoading(false);
+      setDeletingTaskId(null);
     }
   };
 
   // Function to handle edit submit
   const onEditSubmit = async (values: TaskFormValues) => {
     if (!selectedTask) return;
-
+    setEditLoading(true);
     try {
       const response = await fetch(`/api/tasks?id=${selectedTask.id}`, {
         method: "PUT",
@@ -419,6 +436,8 @@ export default function TasksPage() {
     } catch (error) {
       console.error("Error updating task:", error);
       alert(error instanceof Error ? error.message : "Failed to update task");
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -465,6 +484,25 @@ export default function TasksPage() {
       startDate: "",
       endDate: "",
     }));
+  };
+
+  // Add a function to handle copy
+  const handleCopy = (task: Task) => {
+    form.reset({
+      title: task.title,
+      description: task.description,
+      issueLink: task.issueLink || "",
+      priority: task.priority as "high" | "medium" | "low",
+      status: task.status as any,
+      projectId: task.projectId,
+      assignedToId: task.assignedToId,
+      dateRange: {
+        from: new Date(task.startDate),
+        to: new Date(task.endDate),
+      },
+      contributionScore: task.contributionScore?.toString() || "0",
+    });
+    setIsOpen(true);
   };
 
   return (
@@ -760,7 +798,14 @@ export default function TasksPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full">
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={createLoading}
+                >
+                  {createLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+                  ) : null}
                   Create Task
                 </Button>
               </form>
@@ -788,7 +833,10 @@ export default function TasksPage() {
             <AlertDialogCancel onClick={() => setTaskToDelete(null)}>
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleteLoading}>
+              {deleteLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+              ) : null}
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1055,7 +1103,10 @@ export default function TasksPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={editLoading}>
+                {editLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2 inline" />
+                ) : null}
                 Update Task
               </Button>
             </form>
@@ -1236,7 +1287,12 @@ export default function TasksPage() {
       </div>
 
       {/* Tasks Table */}
-      <div className="rounded-md border">
+      <div className="rounded-md border relative">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/60 z-10">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
@@ -1253,7 +1309,21 @@ export default function TasksPage() {
           </TableHeader>
           <TableBody>
             {tasks.map((task) => (
-              <TableRow key={task.id}>
+              <TableRow
+                key={task.id}
+                className={cn({
+                  "bg-yellow-50 dark:bg-yellow-900/30":
+                    task.status === "not_started",
+                  "bg-blue-50 dark:bg-blue-900/30":
+                    task.status === "developing",
+                  "bg-purple-50 dark:bg-purple-900/30":
+                    task.status === "testing",
+                  "bg-green-50 dark:bg-green-900/30": task.status === "online",
+                  "bg-orange-50 dark:bg-orange-900/30":
+                    task.status === "suspended",
+                  "bg-red-50 dark:bg-red-900/30": task.status === "canceled",
+                })}
+              >
                 <TableCell className="font-medium">
                   {task.issueLink ? (
                     <a
@@ -1338,6 +1408,14 @@ export default function TasksPage() {
                       onClick={() => handleDelete(task.id)}
                     >
                       <Trash2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleCopy(task)}
+                      title="Copy Task"
+                    >
+                      <Copy className="h-4 w-4" />
                     </Button>
                   </div>
                 </TableCell>
