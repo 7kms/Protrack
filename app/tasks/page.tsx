@@ -78,6 +78,8 @@ import {
   subYears,
   startOfYear,
   endOfYear,
+  differenceInCalendarDays,
+  format,
 } from "date-fns";
 import { useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -103,7 +105,7 @@ interface TaskFormValues {
     to: Date;
   };
   contributionScore: string;
-  category: "op" | "h5" | "architecture";
+  category: "op" | "h5" | "web" | "architecture";
 }
 
 const taskSchema = z.object({
@@ -131,7 +133,7 @@ const taskSchema = z.object({
       return !isNaN(num) && num >= -10 && num <= 10;
     }, "Contribution score must be between -10 and 10")
     .transform((val) => Number(val)),
-  category: z.enum(["op", "h5", "architecture"], {
+  category: z.enum(["op", "h5", "web", "architecture"], {
     required_error: "Please select a category",
   }),
 });
@@ -142,7 +144,7 @@ interface Task {
   issueLink?: string;
   status: string;
   priority: string;
-  category: string;
+  category: "op" | "h5" | "web" | "architecture";
   projectId: number;
   assignedToId: number;
   startDate: string;
@@ -214,144 +216,140 @@ const TasksTable = React.memo(
               <TableHead>Assignee</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>End Date</TableHead>
+              <TableHead>Days Lasted</TableHead>
               <TableHead>Contribution</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {tasks.map((task) => (
-              <TableRow
-                key={task.id}
-                className={cn("group transition-colors", {
-                  "bg-yellow-100/80 hover:bg-yellow-200/80 dark:bg-yellow-900/40 dark:hover:bg-yellow-900/50":
-                    task.status === "not_started",
-                  "bg-blue-100/80 hover:bg-blue-200/80 dark:bg-blue-900/40 dark:hover:bg-blue-900/50":
-                    task.status === "developing",
-                  "bg-purple-100/80 hover:bg-purple-200/80 dark:bg-purple-900/40 dark:hover:bg-purple-900/50":
-                    task.status === "testing",
-                  "bg-green-100/80 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/50":
-                    task.status === "online",
-                  "bg-orange-100/80 hover:bg-orange-200/80 dark:bg-orange-900/40 dark:hover:bg-orange-900/50":
-                    task.status === "suspended",
-                  "bg-red-100/80 hover:bg-red-200/80 dark:bg-red-900/40 dark:hover:bg-red-900/50":
-                    task.status === "canceled",
-                })}
-              >
-                <TableCell className="font-medium">
-                  {task.issueLink ? (
-                    <a
-                      href={task.issueLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors"
-                    >
-                      {task.title}
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-                  ) : (
-                    task.title
+            {tasks.map((task) => {
+              const start = new Date(task.startDate);
+              const end = new Date(task.endDate);
+              const daysLasted = differenceInCalendarDays(end, start) + 1;
+              return (
+                <TableRow
+                  key={task.id}
+                  className={cn(
+                    "group transition-colors",
+                    task.status === "online" &&
+                      "bg-green-50 dark:bg-green-900/30"
                   )}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                      {
-                        "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200":
-                          task.status === "not_started",
-                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                          task.status === "developing",
-                        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
-                          task.status === "testing",
-                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                          task.status === "online",
-                        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200":
-                          task.status === "suspended",
-                        "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
-                          task.status === "canceled",
-                      }
+                >
+                  <TableCell className="font-medium">
+                    {task.issueLink ? (
+                      <a
+                        href={task.issueLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors"
+                      >
+                        {task.title}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    ) : (
+                      task.title
                     )}
-                  >
-                    {task.status}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                      {
-                        "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
-                          task.priority === "high",
-                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                          task.priority === "medium",
-                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                          task.priority === "low",
-                      }
-                    )}
-                  >
-                    {task.priority}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={cn(
-                      "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                      {
-                        "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                          task.category === "op",
-                        "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
-                          task.category === "h5",
-                        "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                          task.category === "architecture",
-                      }
-                    )}
-                  >
-                    {task.category.toUpperCase()}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  {projects.find((p) => p.id === task.projectId)?.title}
-                </TableCell>
-                <TableCell>
-                  {users.find((u) => u.id === task.assignedToId)?.name}
-                </TableCell>
-                <TableCell>
-                  {new Date(task.startDate).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  {new Date(task.endDate).toLocaleDateString()}
-                </TableCell>
-                <TableCell>{task.contributionScore}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onEdit(task)}
-                      className="hover:bg-primary/10 hover:text-primary"
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                        {
+                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200":
+                            task.status === "not_started",
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
+                            task.status === "developing",
+                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
+                            task.status === "testing",
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
+                            task.status === "online",
+                          "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200":
+                            task.status === "suspended",
+                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
+                            task.status === "canceled",
+                        }
+                      )}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onCopy(task)}
-                      className="hover:bg-primary/10 hover:text-primary"
+                      {task.status}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                        {
+                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
+                            task.priority === "high",
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
+                            task.priority === "medium",
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
+                            task.priority === "low",
+                        }
+                      )}
                     >
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(task.id)}
-                      className="hover:bg-destructive/10 hover:text-destructive"
+                      {task.priority}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
+                        {
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
+                            task.category === "op",
+                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
+                            task.category === "h5",
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
+                            task.category === "architecture",
+                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200":
+                            task.category === "web",
+                        }
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+                      {task.category.toUpperCase()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {projects.find((p) => p.id === task.projectId)?.title}
+                  </TableCell>
+                  <TableCell>
+                    {users.find((u) => u.id === task.assignedToId)?.name}
+                  </TableCell>
+                  <TableCell>{format(start, "MM/dd")}</TableCell>
+                  <TableCell>{format(end, "MM/dd")}</TableCell>
+                  <TableCell>{daysLasted}</TableCell>
+                  <TableCell>{task.contributionScore}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onEdit(task)}
+                        className="hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onCopy(task)}
+                        className="hover:bg-primary/10 hover:text-primary"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => onDelete(task.id)}
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       </div>
@@ -593,7 +591,7 @@ export default function TasksPage() {
         to: new Date(task.endDate),
       },
       contributionScore: task.contributionScore.toString(),
-      category: task.category as "op" | "h5" | "architecture",
+      category: task.category as "op" | "h5" | "web" | "architecture",
     });
     setIsEditOpen(true);
   };
@@ -737,7 +735,7 @@ export default function TasksPage() {
         to: new Date(task.endDate),
       },
       contributionScore: task.contributionScore.toString(),
-      category: task.category as "op" | "h5" | "architecture",
+      category: task.category as "op" | "h5" | "web" | "architecture",
     });
     setIsOpen(true);
   };

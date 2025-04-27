@@ -26,7 +26,7 @@ CREATE TABLE tasks (
     issue_link VARCHAR(255),
     status VARCHAR(20) NOT NULL CHECK (status IN ('not_started', 'developing', 'testing', 'online', 'suspended', 'canceled')),
     priority VARCHAR(10) NOT NULL CHECK (priority IN ('high', 'medium', 'low')),
-    category VARCHAR(20) NOT NULL CHECK (category IN ('op', 'h5', 'architecture')) DEFAULT 'op',
+    category VARCHAR(20) NOT NULL CHECK (category IN ('op', 'h5', 'web', 'architecture')) DEFAULT 'op',
     contribution_score INTEGER DEFAULT 0,
     start_date DATE,
     end_date DATE,

@@ -126,11 +126,13 @@ export function TaskFilters({
           options={[
             { value: "op", label: "OP" },
             { value: "h5", label: "H5" },
+            { value: "web", label: "Web" },
             { value: "architecture", label: "Architecture" },
           ]}
         >
           <SelectItem value="op">OP</SelectItem>
           <SelectItem value="h5">H5</SelectItem>
+          <SelectItem value="web">Web</SelectItem>
           <SelectItem value="architecture">Architecture</SelectItem>
         </MultiSelect>
       </div>

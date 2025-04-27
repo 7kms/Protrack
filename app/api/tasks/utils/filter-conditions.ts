@@ -20,7 +20,7 @@ export function buildFilterConditions(searchParams: URLSearchParams) {
     "high" | "medium" | "low"
   >;
   const categories = getArrayFromParams(searchParams.get("category")) as Array<
-    "op" | "h5" | "architecture"
+    "op" | "h5" | "web" | "architecture"
   >;
 
   const startDate = searchParams.get("startDate");
@@ -44,14 +44,36 @@ export function buildFilterConditions(searchParams: URLSearchParams) {
     );
   }
 
-  if (startDate) {
-    conditions.push(gte(tasks.startDate, new Date(startDate)));
-  }
-
-  if (endDate) {
-    const endDateObj = new Date(endDate);
-    endDateObj.setHours(23, 59, 59, 999);
-    conditions.push(lte(tasks.endDate, endDateObj));
+  // Date range: include tasks if startDate OR endDate is in the query range
+  if (startDate || endDate) {
+    const start = startDate ? new Date(startDate) : undefined;
+    const end = endDate ? new Date(endDate) : undefined;
+    if (end) end.setHours(23, 59, 59, 999);
+    if (start && end) {
+      conditions.push(
+        sql`(
+          (${tasks.startDate} BETWEEN ${start} AND ${end})
+          OR
+          (${tasks.endDate} BETWEEN ${start} AND ${end})
+        )`
+      );
+    } else if (start) {
+      conditions.push(
+        sql`(
+          (${tasks.startDate} >= ${start})
+          OR
+          (${tasks.endDate} >= ${start})
+        )`
+      );
+    } else if (end) {
+      conditions.push(
+        sql`(
+          (${tasks.startDate} <= ${end})
+          OR
+          (${tasks.endDate} <= ${end})
+        )`
+      );
+    }
   }
 
   if (statuses.length > 0) {

@@ -66,7 +66,9 @@ export async function GET(request: Request) {
       );
     }
     if (query.startDate) {
-      conditions.push(gte(tasks.startDate, new Date(query.startDate)));
+      // we need to get all tasks that have an end date is in the date range
+      // so we only need to search the tasks by end date regarless of the start date
+      conditions.push(gte(tasks.endDate, new Date(query.startDate)));
     }
     if (query.endDate) {
       conditions.push(lte(tasks.endDate, new Date(query.endDate)));

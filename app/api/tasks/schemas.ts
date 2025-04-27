@@ -14,7 +14,7 @@ export const taskSchema = z.object({
     "canceled",
   ]),
   priority: z.enum(["high", "medium", "low"]),
-  category: z.enum(["op", "h5", "architecture"]),
+  category: z.enum(["op", "h5", "web", "architecture"]),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   contributionScore: z
