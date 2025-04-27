@@ -16,22 +16,7 @@ import {
   Check,
   Download,
 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/app/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/app/components/ui/form";
-import { Input } from "@/app/components/ui/input";
+
 import {
   Select,
   SelectContent,
@@ -43,8 +28,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { DateRange } from "react-day-picker";
-import { DateRangePicker } from "@/app/components/ui/date-range-picker";
-import { CalendarIcon } from "lucide-react";
 import { cn } from "../lib/utils";
 import {
   AlertDialog,
@@ -55,6 +38,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from "@/app/components/ui/alert-dialog";
 import {
   Table,
@@ -208,7 +192,7 @@ const TasksTable = React.memo(
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Title</TableHead>
+              <TableHead>Title (Issue)</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Category</TableHead>
@@ -254,37 +238,33 @@ const TasksTable = React.memo(
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                        {
-                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200":
-                            task.status === "not_started",
-                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                            task.status === "developing",
-                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
-                            task.status === "testing",
-                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                            task.status === "online",
-                          "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200":
-                            task.status === "suspended",
-                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
-                            task.status === "canceled",
-                        }
+                        task.status === "not_started" &&
+                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200",
+                        task.status === "developing" &&
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                        task.status === "testing" &&
+                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                        task.status === "online" &&
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                        task.status === "suspended" &&
+                          "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+                        task.status === "canceled" &&
+                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
                       )}
                     >
-                      {task.status}
+                      {task.status.replace(/_/g, " ")}
                     </span>
                   </TableCell>
                   <TableCell>
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                        {
-                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200":
-                            task.priority === "high",
-                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                            task.priority === "medium",
-                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                            task.priority === "low",
-                        }
+                        task.priority === "high" &&
+                          "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+                        task.priority === "medium" &&
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                        task.priority === "low" &&
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
                       )}
                     >
                       {task.priority}
@@ -294,16 +274,14 @@ const TasksTable = React.memo(
                     <span
                       className={cn(
                         "inline-flex items-center rounded-full px-2 py-1 text-xs font-medium",
-                        {
-                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200":
-                            task.category === "op",
-                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200":
-                            task.category === "h5",
-                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200":
-                            task.category === "architecture",
-                          "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200":
-                            task.category === "web",
-                        }
+                        task.category === "op" &&
+                          "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+                        task.category === "h5" &&
+                          "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+                        task.category === "web" &&
+                          "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+                        task.category === "architecture" &&
+                          "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200"
                       )}
                     >
                       {task.category.toUpperCase()}
@@ -315,8 +293,8 @@ const TasksTable = React.memo(
                   <TableCell>
                     {users.find((u) => u.id === task.assignedToId)?.name}
                   </TableCell>
-                  <TableCell>{format(start, "MM/dd")}</TableCell>
-                  <TableCell>{format(end, "MM/dd")}</TableCell>
+                  <TableCell>{format(start, "MMM d, yyyy")}</TableCell>
+                  <TableCell>{format(end, "MMM d, yyyy")}</TableCell>
                   <TableCell>{daysLasted}</TableCell>
                   <TableCell>{task.contributionScore}</TableCell>
                   <TableCell>
@@ -325,7 +303,6 @@ const TasksTable = React.memo(
                         variant="ghost"
                         size="icon"
                         onClick={() => onEdit(task)}
-                        className="hover:bg-primary/10 hover:text-primary"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -333,18 +310,34 @@ const TasksTable = React.memo(
                         variant="ghost"
                         size="icon"
                         onClick={() => onCopy(task)}
-                        className="hover:bg-primary/10 hover:text-primary"
                       >
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDelete(task.id)}
-                        className="hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will
+                              permanently delete the task.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => onDelete(task.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>

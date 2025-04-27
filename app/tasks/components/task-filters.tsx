@@ -6,7 +6,6 @@ import { DateRangePicker } from "@/app/components/ui/date-range-picker";
 import { Button } from "@/app/components/ui/button";
 import { CalendarIcon, X } from "lucide-react";
 import { DateRange } from "react-day-picker";
-import { subWeeks, subMonths, subMonths as subSeasons } from "date-fns";
 
 interface FilterState {
   assignedToId: string[];
@@ -88,20 +87,50 @@ export function TaskFilters({
           onValueChange={(value) => onFilterChange("status", value)}
           placeholder="Filter by status"
           options={[
-            { value: "not_started", label: "Not Started" },
-            { value: "developing", label: "Developing" },
-            { value: "testing", label: "Testing" },
-            { value: "online", label: "Online" },
-            { value: "suspended", label: "Suspended" },
-            { value: "canceled", label: "Canceled" },
+            { value: "not_started", label: "Not Started", color: "yellow" },
+            { value: "developing", label: "Developing", color: "blue" },
+            { value: "testing", label: "Testing", color: "purple" },
+            { value: "online", label: "Online", color: "green" },
+            { value: "suspended", label: "Suspended", color: "orange" },
+            { value: "canceled", label: "Canceled", color: "red" },
           ]}
         >
-          <SelectItem value="not_started">Not Started</SelectItem>
-          <SelectItem value="developing">Developing</SelectItem>
-          <SelectItem value="testing">Testing</SelectItem>
-          <SelectItem value="online">Online</SelectItem>
-          <SelectItem value="suspended">Suspended</SelectItem>
-          <SelectItem value="canceled">Canceled</SelectItem>
+          <SelectItem
+            value="not_started"
+            className="text-yellow-800 dark:text-yellow-200"
+          >
+            Not Started
+          </SelectItem>
+          <SelectItem
+            value="developing"
+            className="text-blue-800 dark:text-blue-200"
+          >
+            Developing
+          </SelectItem>
+          <SelectItem
+            value="testing"
+            className="text-purple-800 dark:text-purple-200"
+          >
+            Testing
+          </SelectItem>
+          <SelectItem
+            value="online"
+            className="text-green-800 dark:text-green-200"
+          >
+            Online
+          </SelectItem>
+          <SelectItem
+            value="suspended"
+            className="text-orange-800 dark:text-orange-200"
+          >
+            Suspended
+          </SelectItem>
+          <SelectItem
+            value="canceled"
+            className="text-red-800 dark:text-red-200"
+          >
+            Canceled
+          </SelectItem>
         </MultiSelect>
 
         <MultiSelect
@@ -109,14 +138,26 @@ export function TaskFilters({
           onValueChange={(value) => onFilterChange("priority", value)}
           placeholder="Filter by priority"
           options={[
-            { value: "high", label: "High" },
-            { value: "medium", label: "Medium" },
-            { value: "low", label: "Low" },
+            { value: "high", label: "High", color: "red" },
+            { value: "medium", label: "Medium", color: "blue" },
+            { value: "low", label: "Low", color: "green" },
           ]}
         >
-          <SelectItem value="high">High</SelectItem>
-          <SelectItem value="medium">Medium</SelectItem>
-          <SelectItem value="low">Low</SelectItem>
+          <SelectItem value="high" className="text-red-800 dark:text-red-200">
+            High
+          </SelectItem>
+          <SelectItem
+            value="medium"
+            className="text-blue-800 dark:text-blue-200"
+          >
+            Medium
+          </SelectItem>
+          <SelectItem
+            value="low"
+            className="text-green-800 dark:text-green-200"
+          >
+            Low
+          </SelectItem>
         </MultiSelect>
 
         <MultiSelect
@@ -124,16 +165,33 @@ export function TaskFilters({
           onValueChange={(value) => onFilterChange("category", value)}
           placeholder="Filter by category"
           options={[
-            { value: "op", label: "OP" },
-            { value: "h5", label: "H5" },
-            { value: "web", label: "Web" },
-            { value: "architecture", label: "Architecture" },
+            { value: "op", label: "OP", color: "blue" },
+            { value: "h5", label: "H5", color: "purple" },
+            { value: "web", label: "Web", color: "green" },
+            { value: "architecture", label: "Architecture", color: "orange" },
           ]}
         >
-          <SelectItem value="op">OP</SelectItem>
-          <SelectItem value="h5">H5</SelectItem>
-          <SelectItem value="web">Web</SelectItem>
-          <SelectItem value="architecture">Architecture</SelectItem>
+          <SelectItem value="op" className="text-blue-800 dark:text-blue-200">
+            OP
+          </SelectItem>
+          <SelectItem
+            value="h5"
+            className="text-purple-800 dark:text-purple-200"
+          >
+            H5
+          </SelectItem>
+          <SelectItem
+            value="web"
+            className="text-green-800 dark:text-green-200"
+          >
+            Web
+          </SelectItem>
+          <SelectItem
+            value="architecture"
+            className="text-orange-800 dark:text-orange-200"
+          >
+            Architecture
+          </SelectItem>
         </MultiSelect>
       </div>
 

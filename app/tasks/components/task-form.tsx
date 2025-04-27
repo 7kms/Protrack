@@ -237,9 +237,24 @@ export function TaskFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem
+                        value="high"
+                        className="text-red-800 dark:text-red-200"
+                      >
+                        High
+                      </SelectItem>
+                      <SelectItem
+                        value="medium"
+                        className="text-blue-800 dark:text-blue-200"
+                      >
+                        Medium
+                      </SelectItem>
+                      <SelectItem
+                        value="low"
+                        className="text-green-800 dark:text-green-200"
+                      >
+                        Low
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -262,10 +277,30 @@ export function TaskFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="op">OP</SelectItem>
-                      <SelectItem value="h5">H5</SelectItem>
-                      <SelectItem value="web">Web</SelectItem>
-                      <SelectItem value="architecture">Architecture</SelectItem>
+                      <SelectItem
+                        value="op"
+                        className="text-blue-800 dark:text-blue-200"
+                      >
+                        OP
+                      </SelectItem>
+                      <SelectItem
+                        value="h5"
+                        className="text-purple-800 dark:text-purple-200"
+                      >
+                        H5
+                      </SelectItem>
+                      <SelectItem
+                        value="web"
+                        className="text-green-800 dark:text-green-200"
+                      >
+                        Web
+                      </SelectItem>
+                      <SelectItem
+                        value="architecture"
+                        className="text-orange-800 dark:text-orange-200"
+                      >
+                        Architecture
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -288,12 +323,42 @@ export function TaskFormDialog({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="not_started">Not Started</SelectItem>
-                      <SelectItem value="developing">Developing</SelectItem>
-                      <SelectItem value="testing">Testing</SelectItem>
-                      <SelectItem value="online">Online</SelectItem>
-                      <SelectItem value="suspended">Suspended</SelectItem>
-                      <SelectItem value="canceled">Canceled</SelectItem>
+                      <SelectItem
+                        value="not_started"
+                        className="text-yellow-800 dark:text-yellow-200"
+                      >
+                        Not Started
+                      </SelectItem>
+                      <SelectItem
+                        value="developing"
+                        className="text-blue-800 dark:text-blue-200"
+                      >
+                        Developing
+                      </SelectItem>
+                      <SelectItem
+                        value="testing"
+                        className="text-purple-800 dark:text-purple-200"
+                      >
+                        Testing
+                      </SelectItem>
+                      <SelectItem
+                        value="online"
+                        className="text-green-800 dark:text-green-200"
+                      >
+                        Online
+                      </SelectItem>
+                      <SelectItem
+                        value="suspended"
+                        className="text-orange-800 dark:text-orange-200"
+                      >
+                        Suspended
+                      </SelectItem>
+                      <SelectItem
+                        value="canceled"
+                        className="text-red-800 dark:text-red-200"
+                      >
+                        Canceled
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

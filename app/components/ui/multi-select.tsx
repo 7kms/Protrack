@@ -15,7 +15,7 @@ export type MultiSelectProps = {
   onValueChange: (value: string[]) => void;
   children: React.ReactNode;
   placeholder?: string;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: string; color?: string }[];
 };
 
 export const MultiSelect = React.memo(
@@ -40,7 +40,7 @@ export const MultiSelect = React.memo(
     };
 
     const selectedLabels = value
-      .map((v) => options.find((opt) => opt.value === v)?.label)
+      .map((v) => options.find((opt) => opt.value === v))
       .filter(Boolean);
 
     return (
@@ -54,12 +54,16 @@ export const MultiSelect = React.memo(
               >
                 {selectedLabels.length > 0 ? (
                   <>
-                    {selectedLabels.map((label, index) => (
+                    {selectedLabels.map((option, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-md text-sm"
+                        className={cn(
+                          "inline-flex items-center gap-1 px-2 py-1 rounded-md text-sm",
+                          option?.color &&
+                            `bg-${option.color}-100 text-${option.color}-800 dark:bg-${option.color}-900 dark:text-${option.color}-200`
+                        )}
                       >
-                        {label}
+                        {option?.label}
                       </span>
                     ))}
                   </>
@@ -98,13 +102,10 @@ export const MultiSelect = React.memo(
         </Select>
         {selectedLabels.length > 0 && (
           <div
+            className="absolute right-8 top-1/2 -translate-y-1/2 cursor-pointer"
             onClick={handleClear}
-            className="absolute right-8 top-1/2 -translate-y-1/2 inline-flex items-center justify-center h-6 w-6 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-            role="button"
-            tabIndex={0}
-            title="Clear all"
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4 text-muted-foreground" />
           </div>
         )}
       </div>
