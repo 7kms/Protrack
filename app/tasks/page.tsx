@@ -549,7 +549,7 @@ export default function TasksPage() {
     if (!selectedTask) return;
     setEditLoading(true);
     try {
-      const response = await fetch(`/api/tasks?id=${selectedTask.id}`, {
+      const response = await fetch(`/api/tasks/${selectedTask.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -610,7 +610,7 @@ export default function TasksPage() {
     if (!taskToDelete) return;
     setDeleteLoading(true);
     try {
-      const response = await fetch(`/api/tasks?id=${taskToDelete}`, {
+      const response = await fetch(`/api/tasks/${taskToDelete}`, {
         method: "DELETE",
       });
 
@@ -769,11 +769,8 @@ export default function TasksPage() {
         queryParams.set("endDate", filters.endDate);
       }
 
-      // Add export parameter
-      queryParams.set("export", "excel");
-
-      // Trigger download
-      window.location.href = `/api/tasks?${queryParams.toString()}`;
+      // Trigger download using the new export route
+      window.location.href = `/api/tasks/export?${queryParams.toString()}`;
     } catch (error) {
       console.error("Error exporting tasks:", error);
       alert("Failed to export tasks. Please try again.");
