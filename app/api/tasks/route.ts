@@ -5,7 +5,7 @@ import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { ExcelWriter } from "@/lib/excel-writer";
-import { Readable } from "stream";
+import { Writable } from "stream";
 
 const taskSchema = z.object({
   title: z.string().min(1),
@@ -37,12 +37,6 @@ export async function GET(request: Request) {
     const exportType = searchParams.get("export");
 
     if (exportType === "excel") {
-      // Create a write stream for the Excel file
-      const writer = new ExcelWriter();
-      const stream = new Readable({
-        read() {},
-      });
-
       // Create dynamic filename based on date range
       const startDate = searchParams.get("startDate");
       const endDate = searchParams.get("endDate");
@@ -63,26 +57,60 @@ export async function GET(request: Request) {
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
       );
       headers.set("Content-Disposition", `attachment; filename="${filename}"`);
+      headers.set("Transfer-Encoding", "chunked");
 
-      // Process data and write to Excel
-      (async () => {
-        try {
-          // Get all projects and users for mapping
-          const [allProjects, allUsers] = await Promise.all([
-            db.select().from(projects),
-            db.select().from(users),
-          ]);
+      try {
+        // Get all projects and users for mapping
+        const [allProjects, allUsers] = await Promise.all([
+          db.select().from(projects),
+          db.select().from(users),
+        ]);
 
-          const projectMap = new Map(allProjects.map((p) => [p.id, p.title]));
-          const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
+        const projectMap = new Map(allProjects.map((p) => [p.id, p.title]));
+        const userMap = new Map(allUsers.map((u) => [u.id, u.name]));
 
-          // Get all tasks with current filters
-          const conditions = buildFilterConditions(searchParams);
+        // Get all tasks with current filters
+        const conditions = buildFilterConditions(searchParams);
 
-          const CHUNK_SIZE = 1000; // Process 1000 tasks at a time
-          let offset = 0;
-          let hasMore = true;
+        const CHUNK_SIZE = 1000; // Process 1000 tasks at a time
+        let offset = 0;
+        let hasMore = true;
 
+        // Create a TransformStream to handle the Excel stream
+        const transformStream = new TransformStream();
+        const writer = transformStream.writable.getWriter();
+        const reader = transformStream.readable;
+
+        // Create a custom Writable stream that writes to the TransformStream
+        const customWritable = new Writable({
+          write(chunk, encoding, callback) {
+            writer
+              .write(chunk)
+              .then(() => callback())
+              .catch(callback);
+          },
+          final(callback) {
+            writer
+              .close()
+              .then(() => callback())
+              .catch(callback);
+          },
+        });
+
+        // Create a new ExcelWriter instance with the custom Writable stream
+        const excelWriter = new ExcelWriter(customWritable);
+        excelWriter.initialize();
+
+        // Return the response immediately with the stream
+        const response = new Response(reader, { headers });
+
+        // Process data in chunks in the background
+        processData().catch((error) => {
+          logger.error("Error processing data", { error });
+          writer.abort(error);
+        });
+
+        async function processData() {
           while (hasMore) {
             const chunk = await db
               .select()
@@ -106,24 +134,25 @@ export async function GET(request: Request) {
                 userMap.get(task.assignedToId || 0) || "Unassigned",
             }));
 
-            // Write tasks to Excel
-            writer.addTasks(enrichedChunk);
+            // Add tasks to worksheet in chunks
+            await excelWriter.addTasks(enrichedChunk, CHUNK_SIZE);
+
             offset += CHUNK_SIZE;
+            logger.info(`Processed ${offset} tasks`);
           }
 
-          // Finalize the Excel file
-          writer.finalize();
-
-          // Write the Excel file to the stream
-          await writer.writeExcel(stream);
-        } catch (error) {
-          logger.error("Error generating Excel file", { error });
-          stream.emit("error", error);
+          // Finalize the workbook
+          await excelWriter.finalize();
         }
-      })();
 
-      // Return the stream immediately
-      return new Response(stream as any, { headers });
+        return response;
+      } catch (error) {
+        logger.error("Error generating Excel file", { error });
+        return NextResponse.json(
+          { error: "Failed to generate Excel file" },
+          { status: 500 }
+        );
+      }
     }
 
     const page = parseInt(searchParams.get("page") || "1");

@@ -1,14 +1,22 @@
-import { Readable } from "stream";
-import { Workbook, Worksheet } from "exceljs";
+import * as ExcelJS from "exceljs";
+import { Writable } from "stream";
 
 export class ExcelWriter {
-  private workbook: Workbook;
-  private worksheet: Worksheet;
+  private workbook: any;
+  private worksheet: any;
+  private stream: Writable;
 
-  constructor() {
-    this.workbook = new Workbook();
+  constructor(stream: Writable) {
+    this.stream = stream;
+    this.workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: this.stream,
+      useStyles: true,
+      useSharedStrings: true,
+    });
     this.worksheet = this.workbook.addWorksheet("Tasks");
+  }
 
+  initialize() {
     // Add headers with proper column names
     this.worksheet.columns = [
       { header: "ID", key: "id", width: 10 },
@@ -32,21 +40,9 @@ export class ExcelWriter {
     this.worksheet.getColumn("contributionScore").numFmt = "0.00";
   }
 
-  async writeExcel(stream: Readable) {
-    try {
-      // Write to buffer first
-      const buffer = await this.workbook.xlsx.writeBuffer();
-
-      // Push the buffer to the stream
-      stream.push(buffer);
-      stream.push(null); // Signal end of stream
-    } catch (error) {
-      stream.emit("error", error);
-    }
-  }
-
-  addTasks(tasks: any[]) {
-    tasks.forEach((task) => {
+  async addDataChunk(startIndex: number, endIndex: number, tasks: any[]) {
+    for (let i = startIndex; i <= endIndex; i++) {
+      const task = tasks[i];
       const row = this.worksheet.addRow({
         id: task.id,
         title: task.title,
@@ -69,15 +65,35 @@ export class ExcelWriter {
       // Set number format for the Contribution Score cell
       const contributionScoreCell = row.getCell("contributionScore");
       contributionScoreCell.numFmt = "0.00";
-    });
+
+      // Commit the row to ensure it's written to the stream
+      await row.commit();
+    }
   }
 
-  finalize() {
+  async addTasks(tasks: any[], chunkSize: number = 1000) {
+    const totalTasks = tasks.length;
+    let currentIndex = 0;
+
+    while (currentIndex < totalTasks) {
+      const endIndex = Math.min(currentIndex + chunkSize - 1, totalTasks - 1);
+      await this.addDataChunk(currentIndex, endIndex, tasks);
+      currentIndex = endIndex + 1;
+    }
+  }
+
+  async finalize() {
     // Auto-fit columns
-    this.worksheet.columns.forEach((column) => {
+    this.worksheet.columns.forEach((column: any) => {
       if (column.width) {
         column.width = Math.max(column.width || 0, 10);
       }
     });
+    // Commit the workbook to finalize the stream
+    await this.workbook.commit();
+  }
+
+  getStream(): Writable {
+    return this.stream;
   }
 }
