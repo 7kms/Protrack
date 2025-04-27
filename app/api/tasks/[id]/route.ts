@@ -4,10 +4,8 @@ import { logger } from "@/lib/logger";
 import { TaskService } from "../services/task-service";
 import { taskSchema } from "../schemas";
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const body = await request.json();
     const validatedData = taskSchema.parse(body);
@@ -56,10 +54,8 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     try {
       const taskId = parseInt(await params.id);

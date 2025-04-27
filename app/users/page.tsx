@@ -97,9 +97,7 @@ export default function UsersPage() {
 
   const onSubmit = async (values: z.infer<typeof userSchema>) => {
     try {
-      const url = editingUser
-        ? `/api/users?id=${editingUser.id}`
-        : "/api/users";
+      const url = editingUser ? `/api/users/${editingUser.id}` : "/api/users";
       const method = editingUser ? "PUT" : "POST";
 
       const response = await fetch(url, {
@@ -144,7 +142,7 @@ export default function UsersPage() {
   const confirmDelete = async () => {
     if (!userToDelete) return;
     try {
-      const response = await fetch(`/api/users?id=${userToDelete.id}`, {
+      const response = await fetch(`/api/users/${userToDelete.id}`, {
         method: "DELETE",
       });
       const data = await response.json();

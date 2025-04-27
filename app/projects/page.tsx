@@ -100,7 +100,7 @@ export default function ProjectsPage() {
     setEditingProject(project);
     form.reset({
       title: project.title,
-      description: project.description || "",
+      description: project.description,
       difficultyMultiplier: project.difficultyMultiplier,
     });
     setIsOpen(true);
@@ -116,7 +116,7 @@ export default function ProjectsPage() {
     if (!projectToDelete) return;
 
     try {
-      const response = await fetch(`/api/projects?id=${projectToDelete}`, {
+      const response = await fetch(`/api/projects/${projectToDelete}`, {
         method: "DELETE",
       });
 
@@ -141,7 +141,7 @@ export default function ProjectsPage() {
   const onSubmit = async (values: z.infer<typeof projectSchema>) => {
     try {
       const url = editingProject
-        ? `/api/projects?id=${editingProject.id}`
+        ? `/api/projects/${editingProject.id}`
         : "/api/projects";
       const method = editingProject ? "PUT" : "POST";
 
@@ -184,7 +184,13 @@ export default function ProjectsPage() {
             if (!open) {
               setIsOpen(false);
               setEditingProject(null);
-              form.reset();
+              form.reset({
+                title: "",
+                description: "",
+                difficultyMultiplier: 1,
+              });
+            } else {
+              setIsOpen(true);
             }
           }}
         >

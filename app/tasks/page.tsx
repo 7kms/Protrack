@@ -424,7 +424,7 @@ export default function TasksPage() {
         to: new Date(),
       },
       contributionScore: "0",
-      category: "op",
+      category: "h5",
     },
   });
 
