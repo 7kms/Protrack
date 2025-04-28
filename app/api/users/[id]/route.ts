@@ -65,20 +65,24 @@ export async function DELETE(
       );
     }
 
-    const deletedUser = await db
-      .delete(users)
+    const updatedUser = await db
+      .update(users)
+      .set({
+        active: false,
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, parseInt(id)))
       .returning();
 
-    if (!deletedUser.length) {
+    if (!updatedUser.length) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "User deleted successfully" });
+    return NextResponse.json({ message: "User deactivated successfully" });
   } catch (error) {
-    console.error("Failed to delete user:", error);
+    console.error("Failed to deactivate user:", error);
     return NextResponse.json(
-      { error: "Failed to delete user" },
+      { error: "Failed to deactivate user" },
       { status: 500 }
     );
   }

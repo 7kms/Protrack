@@ -144,6 +144,7 @@ interface Project {
 interface User {
   id: number;
   name: string;
+  active: boolean;
 }
 
 interface PaginationInfo {
@@ -292,9 +293,15 @@ const TasksTable = React.memo(
                   </TableCell>
                   <TableCell>
                     {users.find((u) => u.id === task.assignedToId)?.name}
+                    {users.find((u) => u.id === task.assignedToId)?.active ===
+                      false && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        (Inactive)
+                      </span>
+                    )}
                   </TableCell>
-                  <TableCell>{format(start, "MMM d, yyyy")}</TableCell>
-                  <TableCell>{format(end, "MMM d, yyyy")}</TableCell>
+                  <TableCell>{format(start, "MM/dd")}</TableCell>
+                  <TableCell>{format(end, "MM/dd")}</TableCell>
                   <TableCell>{daysLasted}</TableCell>
                   <TableCell>{task.contributionScore}</TableCell>
                   <TableCell>
@@ -488,7 +495,7 @@ export default function TasksPage() {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch("/api/users");
+      const response = await fetch("/api/users?includeInactive=true");
       const data = await response.json();
       setUsers(Array.isArray(data) ? data : []);
     } catch (error) {

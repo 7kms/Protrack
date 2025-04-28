@@ -3,10 +3,19 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { z } from "zod";
 import { userSchema } from "./schemas";
+import { eq } from "drizzle-orm";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const allUsers = await db.select().from(users);
+    const url = new URL(request.url);
+    const includeInactive = url.searchParams.get("includeInactive") === "true";
+
+    const query = db.select().from(users);
+    if (!includeInactive) {
+      query.where(eq(users.active, true));
+    }
+
+    const allUsers = await query;
     return NextResponse.json(allUsers);
   } catch (error) {
     console.error("Failed to fetch users:", error);
