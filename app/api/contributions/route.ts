@@ -2,105 +2,77 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { tasks, projects, users } from "@/db/schema";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { z } from "zod";
-
-interface ContributionData {
-  users: {
-    [key: number]: {
-      id: number;
-      name: string;
-      role: string;
-      totalContribution: number;
-      projects: {
-        [key: number]: {
-          id: number;
-          title: string;
-          difficulty: number;
-          totalContribution: number;
-          tasks: Array<{
-            id: number;
-            title: string;
-            contribution: number;
-            startDate: Date | null;
-            endDate: Date | null;
-            category: string | null;
-          }>;
-        };
-      };
-      projectContributions: Array<{ name: string; value: number }>;
-      categoryContributions: Record<string, number>;
-    };
-  };
-}
-
-const contributionQuerySchema = z.object({
-  projectId: z.string().optional(),
-  userId: z.string().optional(),
-  category: z.string().optional(),
-  startDate: z.string().optional(),
-  endDate: z.string().optional(),
-});
+import { logger } from "@/lib/logger";
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = contributionQuerySchema.parse({
-      projectId: searchParams.get("projectId") || undefined,
-      userId: searchParams.get("userId") || undefined,
-      category: searchParams.get("category") || undefined,
-      startDate: searchParams.get("startDate") || undefined,
-      endDate: searchParams.get("endDate") || undefined,
-    });
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+    const userId = searchParams.get("userId");
+    const projectId = searchParams.get("projectId");
+    const category = searchParams.get("category");
 
-    // Build the base query
-    const conditions = [];
-    if (query.projectId) {
-      conditions.push(eq(tasks.projectId, parseInt(query.projectId)));
+    // Build base conditions array
+    const conditions = [eq(tasks.active, true)]; // Only consider active tasks
+
+    // Add date filters if provided
+    if (startDate) {
+      conditions.push(gte(tasks.endDate, new Date(startDate)));
     }
-    if (query.userId) {
-      conditions.push(eq(tasks.assignedToId, parseInt(query.userId)));
+    if (endDate) {
+      conditions.push(lte(tasks.endDate, new Date(endDate)));
     }
-    if (query.category) {
+
+    // Add user filter if provided
+    if (userId) {
+      conditions.push(eq(tasks.assignedToId, parseInt(userId)));
+    }
+
+    // Add project filter if provided
+    if (projectId) {
+      conditions.push(eq(tasks.projectId, parseInt(projectId)));
+    }
+
+    // Add category filter if provided
+    if (category && ["op", "h5", "web", "architecture"].includes(category)) {
       conditions.push(
-        eq(tasks.category, query.category as "op" | "h5" | "architecture")
+        eq(tasks.category, category as "op" | "h5" | "web" | "architecture")
       );
     }
-    if (query.startDate) {
-      // we need to get all tasks that have an end date is in the date range
-      // so we only need to search the tasks by end date regarless of the start date
-      conditions.push(gte(tasks.endDate, new Date(query.startDate)));
-    }
-    if (query.endDate) {
-      conditions.push(lte(tasks.endDate, new Date(query.endDate)));
-    }
 
-    const results = await db
+    // First, get all tasks with their details
+    const tasksWithDetails = await db
       .select({
-        taskId: tasks.id,
-        taskTitle: tasks.title,
+        id: tasks.id,
+        title: tasks.title,
         projectId: tasks.projectId,
-        userId: tasks.assignedToId,
+        projectTitle: projects.title,
+        projectDifficulty: projects.difficultyMultiplier,
+        assignedToId: tasks.assignedToId,
+        userName: users.name,
+        userRole: users.role,
         startDate: tasks.startDate,
         endDate: tasks.endDate,
         contributionScore: tasks.contributionScore,
-        projectTitle: projects.title,
-        projectDifficulty: projects.difficultyMultiplier,
-        userName: users.name,
-        userRole: users.role,
         category: tasks.category,
       })
       .from(tasks)
       .leftJoin(projects, eq(tasks.projectId, projects.id))
       .leftJoin(users, eq(tasks.assignedToId, users.id))
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+      .where(and(...conditions));
 
     // Process the results to group by user and project
-    const contributionData = results.reduce((acc, task) => {
-      if (!task.userId) return acc;
+    const contributionData = tasksWithDetails.reduce((acc, task) => {
+      if (!task.assignedToId) return acc;
 
-      if (!acc[task.userId]) {
-        acc[task.userId] = {
-          id: task.userId,
+      const userId = task.assignedToId;
+      const projectId = task.projectId;
+
+      // Initialize user if not exists
+      if (!acc[userId]) {
+        acc[userId] = {
+          id: userId,
           name: task.userName || "Unknown",
           role: task.userRole || "Unknown",
           totalContribution: 0,
@@ -109,14 +81,16 @@ export async function GET(request: Request) {
           categoryContributions: {
             op: 0,
             h5: 0,
+            web: 0,
             architecture: 0,
           },
         };
       }
 
-      if (task.projectId && !acc[task.userId].projects[task.projectId]) {
-        acc[task.userId].projects[task.projectId] = {
-          id: task.projectId,
+      // Initialize project if not exists
+      if (projectId && !acc[userId].projects[projectId]) {
+        acc[userId].projects[projectId] = {
+          id: projectId,
           title: task.projectTitle || "Unknown",
           difficulty: task.projectDifficulty || 1,
           totalContribution: 0,
@@ -124,28 +98,28 @@ export async function GET(request: Request) {
         };
       }
 
-      if (task.contributionScore) {
-        const contribution =
-          Number(task.contributionScore) * Number(task.projectDifficulty || 1);
-        acc[task.userId].totalContribution += contribution;
+      // Calculate contribution
+      const contribution =
+        Number(task.contributionScore || 0) *
+        Number(task.projectDifficulty || 1);
+      acc[userId].totalContribution += contribution;
 
-        // Add to category contributions
-        if (task.category) {
-          acc[task.userId].categoryContributions[task.category] += contribution;
-        }
+      // Add to category contributions
+      if (task.category) {
+        acc[userId].categoryContributions[task.category] += contribution;
+      }
 
-        if (task.projectId) {
-          acc[task.userId].projects[task.projectId].totalContribution +=
-            contribution;
-          acc[task.userId].projects[task.projectId].tasks.push({
-            id: task.taskId,
-            title: task.taskTitle || "Unknown",
-            contribution: contribution,
-            startDate: task.startDate,
-            endDate: task.endDate,
-            category: task.category,
-          });
-        }
+      // Add to project contributions
+      if (projectId) {
+        acc[userId].projects[projectId].totalContribution += contribution;
+        acc[userId].projects[projectId].tasks.push({
+          id: task.id,
+          title: task.title || "Unknown",
+          contribution: contribution,
+          startDate: task.startDate,
+          endDate: task.endDate,
+          category: task.category,
+        });
       }
 
       return acc;
@@ -171,9 +145,7 @@ export async function GET(request: Request) {
 
     // Calculate total contributions for all users
     const totalContributions = Object.values(contributionData).reduce(
-      (acc, user) => {
-        return acc + user.totalContribution;
-      },
+      (acc, user) => acc + user.totalContribution,
       0
     );
 
@@ -182,9 +154,9 @@ export async function GET(request: Request) {
       totalContributions,
     });
   } catch (error) {
-    console.error("Error fetching contribution data:", error);
+    logger.error("Error fetching contributions", { error });
     return NextResponse.json(
-      { error: "Failed to fetch contribution data" },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

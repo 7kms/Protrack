@@ -66,12 +66,13 @@ export const tasks = pgTable("tasks", {
   priority: text("priority", { enum: ["high", "medium", "low"] })
     .notNull()
     .default("medium"),
-  category: text("category", { enum: ["op", "h5", "architecture"] })
+  category: text("category", { enum: ["op", "h5", "web", "architecture"] })
     .notNull()
     .default("op"),
   startDate: timestamp("start_date"),
   endDate: timestamp("end_date"),
   contributionScore: decimal("contribution_score").default("0"),
+  active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

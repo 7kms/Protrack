@@ -52,24 +52,21 @@ export function TaskFilters({
     <div className="space-y-4">
       {/* User and Project Filters */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Assignee</label>
-          <MultiSelect
-            value={assignedToId}
-            onValueChange={(value) => onFilterChange("assignedToId", value)}
-            placeholder="Filter by assignee"
-            options={activeUsers.map((user) => ({
-              value: user.id.toString(),
-              label: user.name,
-            }))}
-          >
-            {activeUsers.map((user) => (
-              <SelectItem key={user.id} value={user.id.toString()}>
-                {user.name}
-              </SelectItem>
-            ))}
-          </MultiSelect>
-        </div>
+        <MultiSelect
+          value={assignedToId}
+          onValueChange={(value) => onFilterChange("assignedToId", value)}
+          placeholder="Filter by assignee"
+          options={activeUsers.map((user) => ({
+            value: user.id.toString(),
+            label: user.name,
+          }))}
+        >
+          {activeUsers.map((user) => (
+            <SelectItem key={user.id} value={user.id.toString()}>
+              {user.name}
+            </SelectItem>
+          ))}
+        </MultiSelect>
 
         <MultiSelect
           value={projectId}

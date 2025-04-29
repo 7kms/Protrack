@@ -15,6 +15,13 @@
       "when": 1745845927105,
       "tag": "0001_breezy_roxanne_simpson",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1745899040409,
+      "tag": "0002_curly_gorilla_man",
+      "breakpoints": true
     }
   ]
 }

@@ -1,10 +1,8 @@
 {
-  "id": "8a56d457-3b85-4b98-8d93-9310239707cc",
-  "prevId": "93118d0d-7cfc-497b-9474-a1f060771c86",
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "tables": {
-    "projects": {
+    "public.projects": {
       "name": "projects",
       "schema": "",
       "columns": {
@@ -57,9 +55,12 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "tasks": {
+    "public.tasks": {
       "name": "tasks",
       "schema": "",
       "columns": {
@@ -153,34 +154,37 @@
         "tasks_project_id_projects_id_fk": {
           "name": "tasks_project_id_projects_id_fk",
           "tableFrom": "tasks",
-          "tableTo": "projects",
           "columnsFrom": [
             "project_id"
           ],
+          "tableTo": "projects",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         },
         "tasks_assigned_to_id_users_id_fk": {
           "name": "tasks_assigned_to_id_users_id_fk",
           "tableFrom": "tasks",
-          "tableTo": "users",
           "columnsFrom": [
             "assigned_to_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
-    "users": {
+    "public.users": {
       "name": "users",
       "schema": "",
       "columns": {
@@ -227,14 +231,23 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {},
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "8a56d457-3b85-4b98-8d93-9310239707cc",
+  "prevId": "93118d0d-7cfc-497b-9474-a1f060771c86",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

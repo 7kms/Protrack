@@ -9,54 +9,42 @@ export class TaskService {
     page: number,
     limit: number
   ) {
-    // Get total count for pagination
-    const totalCount = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(tasks)
-      .where(conditions.length > 0 ? and(...conditions) : undefined);
+    const offset = (page - 1) * limit;
+
+    // Build the base query with active condition
+    const baseConditions = [eq(tasks.active, true)];
+
+    // Add other conditions if they exist
+    if (conditions && conditions.length > 0) {
+      baseConditions.push(...conditions);
+    }
 
     // Get paginated results
-    const result = await db
+    const tasksList = await db
       .select()
       .from(tasks)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(
-        sql`CASE 
-          WHEN ${tasks.priority} = 'high' THEN 1
-          WHEN ${tasks.priority} = 'medium' THEN 2
-          WHEN ${tasks.priority} = 'low' THEN 3
-          ELSE 4 END`,
-        sql`CASE 
-          WHEN ${tasks.status} = 'developing' THEN 1
-          WHEN ${tasks.status} = 'testing' THEN 2
-          WHEN ${tasks.status} = 'online' THEN 3
-          WHEN ${tasks.status} = 'suspended' THEN 4
-          WHEN ${tasks.status} = 'not_started' THEN 5
-          WHEN ${tasks.status} = 'canceled' THEN 6
-          ELSE 7 END`,
-        sql`CASE 
-          WHEN ${tasks.category} = 'h5' THEN 1
-          WHEN ${tasks.category} = 'op' THEN 2
-          WHEN ${tasks.category} = 'web' THEN 3
-          WHEN ${tasks.category} = 'architecture' THEN 4
-          ELSE 5 END`,
-        desc(tasks.endDate)
-      )
+      .where(and(...baseConditions))
       .limit(limit)
-      .offset((page - 1) * limit);
+      .offset(offset);
 
-    if (!Array.isArray(result)) {
-      logger.error("Tasks query result is not an array", { result });
+    // Get total count
+    const total = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(tasks)
+      .where(and(...baseConditions));
+
+    if (!Array.isArray(tasksList)) {
+      logger.error("Tasks query result is not an array", { result: tasksList });
       throw new Error("Internal server error");
     }
 
     return {
-      tasks: result,
+      tasks: tasksList,
       pagination: {
-        total: totalCount[0].count,
+        total: Number(total[0].count),
         page,
         limit,
-        totalPages: Math.ceil(totalCount[0].count / limit),
+        totalPages: Math.ceil(Number(total[0].count) / limit),
       },
     };
   }
@@ -93,34 +81,35 @@ export class TaskService {
   }
 
   static async createTask(taskData: any) {
-    const newTask = await db.insert(tasks).values(taskData).returning();
-    return newTask[0];
+    return await db.insert(tasks).values(taskData).returning();
   }
 
-  static async updateTask(id: number, taskData: any) {
-    const updatedTask = await db
+  static async updateTask(taskId: number, taskData: any) {
+    const result = await db
       .update(tasks)
       .set(taskData)
-      .where(eq(tasks.id, id))
+      .where(eq(tasks.id, taskId))
       .returning();
 
-    if (!updatedTask.length) {
+    if (result.length === 0) {
       throw new Error("Task not found");
     }
 
-    return updatedTask[0];
+    return result[0];
   }
 
-  static async deleteTask(id: number) {
-    const deletedTask = await db
-      .delete(tasks)
-      .where(eq(tasks.id, id))
+  static async deleteTask(taskId: number) {
+    // Instead of deleting, we'll set active to false
+    const result = await db
+      .update(tasks)
+      .set({ active: false })
+      .where(eq(tasks.id, taskId))
       .returning();
 
-    if (!deletedTask.length) {
+    if (result.length === 0) {
       throw new Error("Task not found");
     }
 
-    return { message: "Task deleted successfully" };
+    return result[0];
   }
 }

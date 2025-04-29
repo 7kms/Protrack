@@ -22,4 +22,5 @@ export const taskSchema = z.object({
     .min(-10, "Contribution score must be at least -10")
     .max(10, "Contribution score must be at most 10")
     .optional(),
+  active: z.boolean().optional().default(true),
 });
