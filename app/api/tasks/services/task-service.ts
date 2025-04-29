@@ -24,6 +24,28 @@ export class TaskService {
       .select()
       .from(tasks)
       .where(and(...baseConditions))
+      .orderBy(
+        sql`CASE 
+    WHEN ${tasks.priority} = 'high' THEN 1
+    WHEN ${tasks.priority} = 'medium' THEN 2
+    WHEN ${tasks.priority} = 'low' THEN 3
+    ELSE 4 END`,
+        sql`CASE 
+    WHEN ${tasks.status} = 'developing' THEN 1
+    WHEN ${tasks.status} = 'testing' THEN 2
+    WHEN ${tasks.status} = 'online' THEN 3
+    WHEN ${tasks.status} = 'suspended' THEN 4
+    WHEN ${tasks.status} = 'not_started' THEN 5
+    WHEN ${tasks.status} = 'canceled' THEN 6
+    ELSE 7 END`,
+        sql`CASE 
+    WHEN ${tasks.category} = 'h5' THEN 1
+    WHEN ${tasks.category} = 'op' THEN 2
+    WHEN ${tasks.category} = 'web' THEN 3
+    WHEN ${tasks.category} = 'architecture' THEN 4
+    ELSE 5 END`,
+        desc(tasks.endDate)
+      )
       .limit(limit)
       .offset(offset);
 
@@ -75,7 +97,28 @@ export class TaskService {
       .leftJoin(projects, eq(tasks.projectId, projects.id))
       .leftJoin(users, eq(tasks.assignedToId, users.id))
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(tasks.createdAt))
+      .orderBy(
+        sql`CASE 
+    WHEN ${tasks.priority} = 'high' THEN 1
+    WHEN ${tasks.priority} = 'medium' THEN 2
+    WHEN ${tasks.priority} = 'low' THEN 3
+    ELSE 4 END`,
+        sql`CASE 
+    WHEN ${tasks.status} = 'developing' THEN 1
+    WHEN ${tasks.status} = 'testing' THEN 2
+    WHEN ${tasks.status} = 'online' THEN 3
+    WHEN ${tasks.status} = 'suspended' THEN 4
+    WHEN ${tasks.status} = 'not_started' THEN 5
+    WHEN ${tasks.status} = 'canceled' THEN 6
+    ELSE 7 END`,
+        sql`CASE 
+    WHEN ${tasks.category} = 'h5' THEN 1
+    WHEN ${tasks.category} = 'op' THEN 2
+    WHEN ${tasks.category} = 'web' THEN 3
+    WHEN ${tasks.category} = 'architecture' THEN 4
+    ELSE 5 END`,
+        desc(tasks.endDate)
+      )
       .limit(chunkSize)
       .offset(offset);
   }

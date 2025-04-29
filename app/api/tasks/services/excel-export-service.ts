@@ -1,5 +1,4 @@
-import { TransformStream } from "stream/web";
-import { Writable } from "stream";
+import { Transform } from "stream";
 import { ExcelWriter } from "@/lib/excel-writer";
 import { logger } from "@/lib/logger";
 import { TaskService } from "./task-service";
@@ -13,29 +12,16 @@ export class ExcelExportService {
     let offset = 0;
     let hasMore = true;
 
-    // Create a TransformStream to handle the Excel stream
-    const transformStream = new TransformStream();
-    const writer = transformStream.writable.getWriter();
-    const reader = transformStream.readable;
-
-    // Create a custom Writable stream that writes to the TransformStream
-    const customWritable = new Writable({
-      write(chunk, encoding, callback) {
-        writer
-          .write(chunk)
-          .then(() => callback())
-          .catch(callback);
-      },
-      final(callback) {
-        writer
-          .close()
-          .then(() => callback())
-          .catch(callback);
+    // Create a Transform stream to handle the Excel data
+    const transform = new Transform({
+      transform(chunk, encoding, callback) {
+        this.push(chunk);
+        callback();
       },
     });
 
-    // Create a new ExcelWriter instance with the custom Writable stream
-    const excelWriter = new ExcelWriter(customWritable);
+    // Create a new ExcelWriter instance with the Transform stream
+    const excelWriter = new ExcelWriter(transform);
     excelWriter.initialize();
 
     // Set response headers for file download
@@ -47,13 +33,15 @@ export class ExcelExportService {
     headers.set("Content-Disposition", `attachment; filename="${filename}"`);
     headers.set("Transfer-Encoding", "chunked");
 
-    // Return the response immediately with the stream
-    const response = new Response(reader, { headers });
+    // Convert the Node.js stream to a web stream
+    const response = new Response(transform as unknown as ReadableStream, {
+      headers,
+    });
 
     // Process data in chunks in the background
     processData().catch((error) => {
       logger.error("Error processing data", { error });
-      writer.abort(error);
+      transform.destroy(error);
     });
 
     async function processData() {

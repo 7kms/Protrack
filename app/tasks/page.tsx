@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { Button } from "@/app/components/ui/button";
 import {
   Plus,
@@ -359,7 +359,7 @@ const TasksTable = React.memo(
 
 TasksTable.displayName = "TasksTable";
 
-export default function TasksPage() {
+function TasksPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -509,10 +509,6 @@ export default function TasksPage() {
     fetchProjects();
     fetchUsers();
   }, [pagination.page, pagination.limit, filters]);
-
-  useEffect(() => {
-    console.log("Current tasks state:", tasks);
-  }, [tasks]);
 
   const handleCreateSubmit = async (values: TaskFormValues) => {
     setCreateLoading(true);
@@ -939,5 +935,13 @@ export default function TasksPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TasksPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TasksPageContent />
+    </Suspense>
   );
 }

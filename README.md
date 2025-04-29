@@ -1,6 +1,6 @@
 # ProTrack - Work Statistics System
 
-ProTrack is a modern, full-stack work statistics system built with Next.js, designed to help teams manage projects, track tasks, and analyze contributions efficiently.
+ProTrack is a modern, full-stack work statistics system built with Next.js 15, designed to help teams manage projects, track tasks, and analyze contributions efficiently.
 
 ## Features
 
@@ -18,10 +18,12 @@ ProTrack is a modern, full-stack work statistics system built with Next.js, desi
 
 ### Task Management
 
-- Create and assign tasks with priority levels
-- Track task status and contribution scores
-- Link tasks to external issue tracking systems
+- Create and assign tasks with priority levels (high, medium, low)
+- Track task status (not_started, developing, testing, online, suspended, canceled)
+- Categorize tasks (op, h5, web, architecture)
 - Set start and end dates for better timeline management
+- Link tasks to external issue tracking systems
+- Track contribution scores
 
 ### Contribution Analysis
 
@@ -46,13 +48,16 @@ ProTrack is a modern, full-stack work statistics system built with Next.js, desi
 - **shadcn/ui** - Beautiful, accessible UI components
 - **Tailwind CSS** - Utility-first CSS framework
 - **Zustand** - Lightweight state management
-- **Chart.js** - Interactive data visualization
+- **Recharts** - Interactive data visualization
+- **React Query** - Server state management
+- **React Hook Form** - Form handling with validation
 
 ### Backend
 
 - **Next.js API Routes** - Server-side API endpoints
 - **PostgreSQL** - Robust relational database
-- **Prisma** - Next-generation ORM for database operations
+- **Drizzle ORM** - Type-safe database operations
+- **Zod** - Schema validation
 
 ## Getting Started
 
@@ -82,13 +87,12 @@ pnpm install
 
 ```env
 DATABASE_URL="postgresql://username:password@localhost:5432/protrack"
-NEXT_PUBLIC_API_URL="http://localhost:3000/api"
 ```
 
 4. Initialize the database:
 
 ```bash
-pnpm prisma migrate dev
+pnpm db:push
 ```
 
 5. Start the development server:
@@ -106,7 +110,7 @@ The system uses a PostgreSQL database with the following main tables:
 ### Users
 
 - Basic user information and role management
-- Simple authentication system
+- Roles: admin, manager, developer, team_lead
 
 ### Projects
 
@@ -120,6 +124,15 @@ The system uses a PostgreSQL database with the following main tables:
 - Start and end date management
 - Issue link integration
 - Contribution score tracking
+- Task categories (op, h5, web, architecture)
+
+## Development Tools
+
+- **Drizzle Studio**: Run `pnpm db:studio` to view and manage database
+- **Drizzle Kit**: Database migration and schema management
+- **ESLint**: Code linting
+- **TypeScript**: Type safety
+- **Tailwind CSS**: Styling
 
 ## API Endpoints
 
