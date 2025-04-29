@@ -1,26 +1,12 @@
 {
-  "version": "5",
-  "dialect": "pg",
+  "version": "7",
+  "dialect": "postgresql",
   "entries": [
     {
       "idx": 0,
-      "version": "5",
-      "when": 1745666604349,
-      "tag": "0000_silky_harpoon",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1745845927105,
-      "tag": "0001_breezy_roxanne_simpson",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
       "version": "7",
-      "when": 1745899040409,
-      "tag": "0002_curly_gorilla_man",
+      "when": 1745914684347,
+      "tag": "0000_special_bloodscream",
       "breakpoints": true
     }
   ]

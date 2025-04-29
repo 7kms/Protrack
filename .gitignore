@@ -40,7 +40,6 @@ next-env.d.ts
 *.swo
 
 # Drizzle
-/drizzle/*.sql
 /drizzle/*.json
 
 # pnpm
@@ -48,3 +47,5 @@ next-env.d.ts
 
 # Cursor
 .cursor/ 
+
+postgres_data/
