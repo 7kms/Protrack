@@ -43,33 +43,26 @@ export function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch projects
+      // Fetch dashboard stats from the dedicated endpoint
+      const statsResponse = await fetch("/api/dashboard/stats");
+      const stats = await statsResponse.json();
+
+      // Set stats from the API response
+      setStats({
+        totalProjects: stats.totalProjects || 0,
+        activeTasks: stats.activeTasks || 0,
+        completedTasks: stats.completedTasks || 0,
+        teamMembers: stats.teamMembers || 0,
+      });
+
+      // Fetch recent projects (we'll take only first 5 in frontend for now)
       const projectsResponse = await fetch("/api/projects");
       const projects = await projectsResponse.json();
 
-      // Fetch tasks
-      const tasksResponse = await fetch("/api/tasks");
+      // Fetch recent tasks (limited to first 5)
+      const tasksResponse = await fetch("/api/tasks?limit=5");
       const tasksData = await tasksResponse.json();
       const tasks = tasksData.tasks || [];
-
-      // Fetch users
-      const usersResponse = await fetch("/api/users");
-      const users = await usersResponse.json();
-
-      // Calculate stats
-      const activeTasks = tasks.filter(
-        (t: any) => t.status === "developing" || t.status === "testing"
-      ).length;
-      const completedTasks = tasks.filter(
-        (t: any) => t.status === "online"
-      ).length;
-
-      setStats({
-        totalProjects: Array.isArray(projects) ? projects.length : 0,
-        activeTasks,
-        completedTasks,
-        teamMembers: Array.isArray(users) ? users.length : 0,
-      });
 
       // Set recent items
       if (Array.isArray(projects)) {
