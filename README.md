@@ -103,6 +103,70 @@ pnpm dev
 
 The application will be available at `http://localhost:3000`
 
+## Docker Deployment
+
+ProTrack can also be deployed using Docker and Docker Compose for a containerized environment.
+
+### Prerequisites for Docker
+
+- Docker installed on your system
+- Docker Compose installed on your system
+
+### Docker Setup
+
+1. Clone the repository:
+
+```bash
+git clone https://github.com/yourusername/protrack.git
+cd protrack
+```
+
+2. Create a `.env` file in the root directory:
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@db:5432/protrack"
+NEXT_PUBLIC_API_URL="http://localhost:3000/api"
+```
+
+3. Start the application:
+
+```bash
+docker-compose up --build
+```
+
+The application will be available at `http://localhost:3000`
+
+### Updating the Application
+
+After pulling updates from git, you need to rebuild the Docker image to incorporate the changes:
+
+```bash
+# Pull the latest changes
+git pull origin main
+
+# Rebuild and restart the containers
+docker-compose up --build
+
+# Or if you prefer to rebuild in detached mode
+docker-compose up --build -d
+```
+
+**Important**: Do NOT use `docker-compose restart` after pulling updates, as it will not rebuild the image with your new code changes.
+
+### Alternative Update Commands
+
+```bash
+# Force rebuild without cache (if experiencing issues)
+docker-compose build --no-cache
+docker-compose up
+
+# Stop, rebuild, and start
+docker-compose down
+docker-compose up --build
+```
+
+For more detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
+
 ## Database Schema
 
 The system uses a PostgreSQL database with the following main tables:
@@ -136,9 +200,14 @@ The system uses a PostgreSQL database with the following main tables:
 
 ## API Endpoints
 
+### Dashboard
+
+- `GET /api/dashboard/stats` - Get consolidated dashboard statistics
+
 ### Users
 
 - `GET /api/users` - List all users
+- `GET /api/users/stats` - Get user statistics (team member count)
 - `POST /api/users` - Create new user
 - `GET /api/users/:id` - Get user details
 - `PUT /api/users/:id` - Update user
@@ -147,6 +216,7 @@ The system uses a PostgreSQL database with the following main tables:
 ### Projects
 
 - `GET /api/projects` - List all projects
+- `GET /api/projects/stats` - Get project statistics (total project count)
 - `POST /api/projects` - Create new project
 - `GET /api/projects/:id` - Get project details
 - `PUT /api/projects/:id` - Update project
@@ -154,7 +224,8 @@ The system uses a PostgreSQL database with the following main tables:
 
 ### Tasks
 
-- `GET /api/tasks` - List all tasks
+- `GET /api/tasks` - List all tasks (with pagination)
+- `GET /api/tasks/stats` - Get task statistics (active, completed, total counts)
 - `POST /api/tasks` - Create new task
 - `GET /api/tasks/:id` - Get task details
 - `PUT /api/tasks/:id` - Update task

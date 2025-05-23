@@ -32,6 +32,75 @@ docker-compose up --build
 
 The application will be available at `http://localhost:3000`
 
+## Updating the Application
+
+After pulling updates from git, you need to properly rebuild the Docker image to incorporate code changes.
+
+### ⚠️ Important: Don't Use `docker-compose restart`
+
+**DO NOT** use `docker-compose restart` after pulling updates from git. This command only restarts the existing containers without rebuilding the image, meaning your code changes won't be applied.
+
+### Proper Update Workflow
+
+When you pull updates from git, follow these steps:
+
+1. **Pull the latest changes:**
+
+```bash
+git pull origin main
+```
+
+2. **Rebuild and restart the containers:**
+
+```bash
+# Recommended: Rebuild and start
+docker-compose up --build
+
+# Or in detached mode (background)
+docker-compose up --build -d
+```
+
+### Alternative Update Methods
+
+Depending on your situation, you can use these alternative approaches:
+
+**Method 1: Stop, then rebuild and start**
+
+```bash
+docker-compose down
+docker-compose up --build
+```
+
+**Method 2: Force rebuild without cache (for troubleshooting)**
+
+```bash
+docker-compose build --no-cache
+docker-compose up
+```
+
+**Method 3: Rebuild specific service only**
+
+```bash
+# If you only need to rebuild the app (not the database)
+docker-compose up -d --build app
+```
+
+### When to Use Each Command
+
+- **Use `docker-compose up --build`** - After pulling code updates (most common)
+- **Use `docker-compose restart`** - Only for configuration changes that don't require rebuilding
+- **Use `docker-compose build --no-cache`** - When experiencing caching issues or build problems
+- **Use `docker-compose down && docker-compose up --build`** - For a clean restart with updates
+
+### Quick Reference
+
+```bash
+# ✅ CORRECT: After git pull
+git pull origin main
+docker-compose up -d --build
+
+```
+
 ## Detailed Setup Instructions
 
 ### 1. Environment Setup
@@ -132,6 +201,60 @@ docker-compose logs
    - Check if port 3000 is available
    - Verify the environment variables are set correctly
    - Try rebuilding the containers: `docker-compose up --build`
+
+#### Common Docker Compose Errors
+
+**Error: `KeyError: 'ContainerConfig'`**
+
+This error occurs when Docker images have corrupted metadata or there are container state conflicts.
+
+**Solution (try in order):**
+
+1. **Quick cleanup:**
+
+   ```bash
+   docker-compose down -v
+   docker-compose up --build
+   ```
+
+2. **Medium cleanup:**
+
+   ```bash
+   docker-compose down -v
+   docker image prune -f
+   docker-compose up --build
+   ```
+
+3. **Complete cleanup (⚠️ removes all unused Docker data):**
+
+   ```bash
+   docker system prune -a --volumes
+   docker-compose up --build
+   ```
+
+4. **Try Docker Compose V2:**
+   ```bash
+   docker-compose down -v
+   docker compose up --build  # Note the space instead of hyphen
+   ```
+
+**Error: Port already in use**
+
+```bash
+# Find what's using port 3000
+lsof -i :3000
+
+# Stop the process or change the port in docker-compose.yml
+```
+
+**Error: Volume mount issues**
+
+```bash
+# Remove all volumes and start fresh
+docker-compose down -v
+docker volume prune -f
+docker-compose up --build
+```
 
 ### 7. Development Workflow
 
