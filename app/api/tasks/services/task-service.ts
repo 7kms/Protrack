@@ -26,18 +26,18 @@ export class TaskService {
       .where(and(...baseConditions))
       .orderBy(
         sql`CASE 
+    WHEN ${tasks.status} = 'developing' THEN 1
+    WHEN ${tasks.status} = 'testing' THEN 2
+    WHEN ${tasks.status} = 'not_started' THEN 3
+    WHEN ${tasks.status} = 'online' THEN 4
+    WHEN ${tasks.status} = 'suspended' THEN 5
+    WHEN ${tasks.status} = 'canceled' THEN 6
+    ELSE 7 END`,
+        sql`CASE 
     WHEN ${tasks.priority} = 'high' THEN 1
     WHEN ${tasks.priority} = 'medium' THEN 2
     WHEN ${tasks.priority} = 'low' THEN 3
     ELSE 4 END`,
-        sql`CASE 
-    WHEN ${tasks.status} = 'developing' THEN 1
-    WHEN ${tasks.status} = 'testing' THEN 2
-    WHEN ${tasks.status} = 'online' THEN 3
-    WHEN ${tasks.status} = 'suspended' THEN 4
-    WHEN ${tasks.status} = 'not_started' THEN 5
-    WHEN ${tasks.status} = 'canceled' THEN 6
-    ELSE 7 END`,
         sql`CASE 
     WHEN ${tasks.category} = 'h5' THEN 1
     WHEN ${tasks.category} = 'op' THEN 2

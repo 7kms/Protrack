@@ -727,8 +727,8 @@ function TasksPageContent() {
       projectId: task.projectId,
       assignedToId: task.assignedToId,
       dateRange: {
-        from: new Date(task.startDate),
-        to: new Date(task.endDate),
+        from: new Date(),
+        to: new Date(),
       },
       contributionScore: task.contributionScore.toString(),
       category: task.category as "op" | "h5" | "web" | "architecture",

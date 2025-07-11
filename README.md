@@ -167,6 +167,17 @@ docker-compose up --build
 
 For more detailed Docker setup instructions, see [DOCKER.md](DOCKER.md).
 
+## Database Backup and Import
+
+For comprehensive information on PostgreSQL database backup and import procedures, see [POSTGRES_BACKUP.md](POSTGRES_BACKUP.md).
+
+This includes:
+
+- Docker and native PostgreSQL backup methods
+- Automated backup scripts
+- Data restoration procedures
+- Best practices and troubleshooting
+
 ## Database Schema
 
 The system uses a PostgreSQL database with the following main tables:
